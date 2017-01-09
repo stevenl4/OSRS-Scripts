@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="WC-Script">
+    <output-path>$USER_HOME$/DreamBot/Scripts/</output-path>
+    <root id="archive" name="WC-Script.jar">
+      <element id="module-output" name="WC-Script" />
+    </root>
+  </artifact>
+</component>
