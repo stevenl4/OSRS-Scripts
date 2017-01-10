@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/Miner-Script/Miner-Script.iml" filepath="$PROJECT_DIR$/Miner-Script/Miner-Script.iml" />
       <module fileurl="file://$PROJECT_DIR$/OSRS-Scripts.iml" filepath="$PROJECT_DIR$/OSRS-Scripts.iml" />
       <module fileurl="file://$PROJECT_DIR$/WC-Script/WC-Script.iml" filepath="$PROJECT_DIR$/WC-Script/WC-Script.iml" />
     </modules>
