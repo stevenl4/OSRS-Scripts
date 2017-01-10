@@ -1,12 +1,12 @@
 package util;
 
-public enum Wood {
+public enum wood {
     NORMAL("Logs", "Tree"), OAK("Oak logs", "Oak tree");
 
     private String logName;
     private String treeName;
 
-    Wood(String logName, String treeName){
+    wood(String logName, String treeName){
         setLogName(logName);
         setTreeName(treeName);
     }

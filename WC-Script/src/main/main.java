@@ -1,16 +1,17 @@
-package util;
+package main;
 
 import org.dreambot.api.methods.Calculations;
 import org.dreambot.api.script.AbstractScript;
 import org.dreambot.api.wrappers.interactive.GameObject;
+import util.wood;
 
 /**
  * Created by steven.luo on 10/01/2017.
  */
-public class wood extends AbstractScript {
+public class main extends AbstractScript {
 
     private int state = -1;
-    private Wood currentLog;
+    private wood currentLog;
     private boolean drop = true;
 
     @Override
@@ -30,7 +31,7 @@ public class wood extends AbstractScript {
     public void onStart() {
         super.onStart();
         state = 0;
-        currentLog = Wood.NORMAL;
+        currentLog = wood.NORMAL;
     }
 
     private void cut() {
@@ -38,8 +39,7 @@ public class wood extends AbstractScript {
             GameObject gO = getGameObjects().closest(f -> f.getName().equals(currentLog.getTreeName()));
             if (getLocalPlayer().distance(gO) > 5) {
                 getWalking().walk(gO);
-                sleepUntil(() -> !getLocalPlayer().isMoving())
-                        || getLocalPlayer().distance(getClient().getDestination()) < 7, Calculations.random(4000, 6000);
+                sleepUntil(() -> !getLocalPlayer().isMoving() || getLocalPlayer().distance(getClient().getDestination()) < 7, Calculations.random(4000, 6000));
             } else {
                 if (gO.interact("Chop down")) {
                     sleepUntil(() -> !gO.exists() || !getLocalPlayer().isAnimating(), Calculations.random(12000, 15000));
@@ -61,7 +61,7 @@ public class wood extends AbstractScript {
             sleepUntil(() -> !getBank().isOpen(), Calculations.random(2000, 800));
             state = 0;
         } else {
-            if (getLocalPlayer().distance() (getBank().getClosestBankLocation().getCenter()) > 5){
+            if (getLocalPlayer().distance((getBank().getClosestBankLocation().getCenter())) > 5){
                 if (getWalking().walk(getBank().getClosestBankLocation().getCenter())) {
                     sleepUntil(() -> !getLocalPlayer().isMoving() || getLocalPlayer().distance(getClient().getDestination()) < 8, Calculations.random(3500, 1500));
                 }
