@@ -107,7 +107,7 @@ public class Gui extends JFrame {
         panel.add(lblMinGpAmt);
 
         txtMinGpAmt = new JTextField();
-        txtMinGpAmt.setText("20000");
+        txtMinGpAmt.setText("1000");
         txtMinGpAmt.setBounds(96,146,39,20);
         panel.add(txtMinGpAmt);
         txtMinGpAmt.setColumns(10);

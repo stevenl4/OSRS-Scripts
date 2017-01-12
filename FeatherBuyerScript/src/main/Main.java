@@ -87,7 +87,14 @@ public class Main extends AbstractScript {
         long gp = getInventory().count("Coins");
 
         if (gp < sv.minGP) {
-            return State.WALK_TO_GE;
+            if (getInventory().contains(sv.packName)){
+                return State.OPEN_PACKS;
+            } else if (!geArea.contains(getLocalPlayer())) {
+                return State.WALK_TO_GE;
+            } else {
+                stop();
+            }
+
         }
         if (hopWorlds){
             return State.HOP;
@@ -145,7 +152,7 @@ public class Main extends AbstractScript {
     private void walkToShop(){
         if (getWalking().walk(shopArea.getRandomTile())){
             log("Walking to shop");
-            sleepUntil(() -> getClient().getDestination().distance() < Calculations.random(3,6) || getLocalPlayer().isStandingStill(), Calculations.random(2000,4000));
+            sleepUntil(() -> getClient().getDestination().distance() < Calculations.random(3,6) || getLocalPlayer().isStandingStill(), Calculations.random(900,2500));
         }
 
     }
@@ -162,8 +169,9 @@ public class Main extends AbstractScript {
         hopWorlds = false;
     }
     private void walkToGE(){
+
         if (getWalking().walk(geArea.getRandomTile())){
-            log("Walking to GE");
+            log("Walking to GE, out of cash");
             sleepUntil(() -> getClient().getDestination().distance() < Calculations.random(3,6) || getLocalPlayer().isStandingStill(), Calculations.random(4000,5000));
         }
         sleepUntil(() -> !getLocalPlayer().isMoving(), 1000);

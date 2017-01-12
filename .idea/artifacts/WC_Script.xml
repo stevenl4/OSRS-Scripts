@@ -2,7 +2,10 @@
   <artifact type="jar" name="WC-Script">
     <output-path>$USER_HOME$/DreamBot/Scripts/</output-path>
     <root id="archive" name="WC-Script.jar">
-      <element id="module-output" name="WC-Script" />
+      <element id="module-output" name="WoodcutScript" />
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/WoodcutScript/META-INF/MANIFEST.MF" />
+      </element>
     </root>
   </artifact>
 </component>
