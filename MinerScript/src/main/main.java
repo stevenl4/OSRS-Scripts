@@ -2,11 +2,14 @@ package main;
 
 import org.dreambot.api.methods.Calculations;
 import org.dreambot.api.script.AbstractScript;
+import org.dreambot.api.script.Category;
+import org.dreambot.api.script.ScriptManifest;
 import org.dreambot.api.wrappers.interactive.GameObject;
 
 /**
  * Created by steven.luo on 09/01/2017.
  */
+@ScriptManifest(author = "GB", category = Category.MINING, description = "Mines closest ores", name = "GBMiner", version = 1.0)
 public class main extends AbstractScript {
 
     private int state;
