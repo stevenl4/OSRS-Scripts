@@ -118,13 +118,13 @@ public class Gui extends JFrame {
         panel.add(lblBuySleep);
 
         txtMinBuySleep = new JTextField();
-        txtMinBuySleep.setText("300");
+        txtMinBuySleep.setText("100");
         txtMinBuySleep.setBounds(96,175,39,20);
         panel.add(txtMinBuySleep);
         txtMinBuySleep.setColumns(10);
 
         txtMaxBuySleep = new JTextField();
-        txtMaxBuySleep.setText("500");
+        txtMaxBuySleep.setText("200");
         txtMaxBuySleep.setBounds(160,175,39,20);
         panel.add(txtMaxBuySleep);
         txtMaxBuySleep.setColumns(10);
@@ -135,13 +135,13 @@ public class Gui extends JFrame {
         panel.add(lblOpenSleep);
 
         txtMinOpenSleep = new JTextField();
-        txtMinOpenSleep.setText("100");
+        txtMinOpenSleep.setText("50");
         txtMinOpenSleep.setBounds(96,215,39,20);
         panel.add(txtMinOpenSleep);
         txtMinOpenSleep.setColumns(10);
 
         txtMaxOpenSleep = new JTextField();
-        txtMaxOpenSleep.setText("200");
+        txtMaxOpenSleep.setText("100");
         txtMaxOpenSleep.setBounds(160,215,39,20);
         panel.add(txtMaxOpenSleep);
         txtMaxOpenSleep.setColumns(10);
