@@ -50,7 +50,7 @@ public class Gui extends JFrame {
         contentPane.setLayout(null);
 
         JPanel panel = new JPanel();
-        panel.setBounds(0, 0, 270, 370);
+        panel.setBounds(0, 0, 270, 300);
         contentPane.add(panel);
         panel.setLayout(null);
 
