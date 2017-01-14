@@ -123,7 +123,7 @@ public class Main extends AbstractScript {
                 } else {
                     sleepUntil(() -> pack.getAmount() > 1, 1500);
                 }
-            } else if (pack.getAmount() < sv.minAmt && sv.hopWorlds) {
+            } else if (pack.getAmount() <= sv.minAmt && sv.hopWorlds) {
                 hopWorlds = true;
             } else {
                 if (s.close()){
