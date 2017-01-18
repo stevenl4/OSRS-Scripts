@@ -3,6 +3,9 @@
     <output-path>$USER_HOME$/DreamBot/Scripts</output-path>
     <root id="archive" name="AlKharidWarriorScript.jar">
       <element id="module-output" name="AlKharidWarriorScript" />
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/AlKharidWarriorScript/META-INF/MANIFEST.MF" />
+      </element>
     </root>
   </artifact>
 </component>
