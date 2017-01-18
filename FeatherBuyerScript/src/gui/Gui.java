@@ -141,7 +141,7 @@ public class Gui extends JFrame {
         txtMinOpenSleep.setColumns(10);
 
         txtMaxOpenSleep = new JTextField();
-        txtMaxOpenSleep.setText("125");
+        txtMaxOpenSleep.setText("110");
         txtMaxOpenSleep.setBounds(160,215,39,20);
         panel.add(txtMaxOpenSleep);
         txtMaxOpenSleep.setColumns(10);

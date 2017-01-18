@@ -1,8 +1,0 @@
-<component name="ArtifactManager">
-  <artifact type="jar" name="FeatherBuyerScript:jar">
-    <output-path>$USER_HOME$/DreamBot/Scripts</output-path>
-    <root id="archive" name="FeatherBuyerScript.jar">
-      <element id="module-output" name="FeatherBuyerScript" />
-    </root>
-  </artifact>
-</component>

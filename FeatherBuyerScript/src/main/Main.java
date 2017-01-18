@@ -23,7 +23,7 @@ import java.awt.*;
 public class Main extends AbstractScript {
 
     private boolean hopWorlds = false;
-    private final int[] f2pWorlds = new int[]{1,8,16,26,35,81,82,83,84,85,93,94};
+    private final int[] f2pWorlds = new int[]{1,8,16,26,35,82,83,84,93,94};
     private long startGP;
     private RunTimer timer;
     private int purchasedCount = 0;
@@ -123,7 +123,7 @@ public class Main extends AbstractScript {
                 } else {
                     sleepUntil(() -> pack.getAmount() > 1, 1500);
                 }
-            } else if (pack.getAmount() < sv.minAmt && sv.hopWorlds) {
+            } else if (pack.getAmount() <= sv.minAmt && sv.hopWorlds) {
                 hopWorlds = true;
             } else {
                 if (s.close()){
