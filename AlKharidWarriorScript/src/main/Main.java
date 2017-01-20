@@ -28,6 +28,7 @@ public class Main extends AbstractScript {
 
     ScriptVars sv = new ScriptVars();
     private RunTimer timer;
+    private long lastSearchGround;
     private boolean searchGround;
     private boolean searchTarget;
     List<PricedItem> lootTrack = new ArrayList<PricedItem>();
@@ -41,6 +42,10 @@ public class Main extends AbstractScript {
     }
 
     private State getState() {
+        if (System.currentTimeMillis() - lastSearchGround > 1500){
+            searchGround = true;
+        }
+
         if (getInventory().isFull()){
             if(BankLocation.AL_KHARID.getArea(4).contains(getLocalPlayer())){
                 return State.BANK;
@@ -53,12 +58,12 @@ public class Main extends AbstractScript {
             return State.WALK_TO_TRAINING;
         }
 
-        if (trainingArea.contains(getLocalPlayer()) && !getLocalPlayer().isInCombat() && searchGround){
+        if (trainingArea.contains(getLocalPlayer()) && searchGround){
 
             GroundItem gi = getGroundItems().closest(itemFilter);
+            lastSearchGround = System.currentTimeMillis();
             searchGround = false;
             if ( gi != null ) {
-
                 return State.LOOT;
             } else {
                 return State.ATTACK;
@@ -235,7 +240,6 @@ public class Main extends AbstractScript {
             if (!gi.exists()) {
                 log("looted " + gi.getName());
             }
-            searchGround = true;
         }
     }
 
