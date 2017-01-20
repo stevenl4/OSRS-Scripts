@@ -35,6 +35,7 @@ public class Main extends AbstractScript {
     private boolean started;
     private long lastOverloadDose;
     private long lastPowerUpCheck;
+    private long lastPowerSurge;
     private boolean outOfPrayerPots = false;
     private boolean outOfOverloadPots = false;
     private boolean useSpec = false;
@@ -42,7 +43,6 @@ public class Main extends AbstractScript {
     private Area startArea = new Area (2601,3118,2612,3112,0);
     private Area dreamArea = new Area (0,100000,100000,0,3);
     private Area practiceArea = new Area (0, 100000, 100000, 0, 1);
-    private Tile potionTile = new Tile(2605,3116,0);
     private Tile startTile;
     private Item mainWeapon;
     private Item mainShield;
@@ -64,6 +64,11 @@ public class Main extends AbstractScript {
         if (testMode){
             return State.TEST;
         } else {
+            // Verify there is overload potion and prayer potion and overload potion
+            if (!verifyEquipment()){
+                return State.GET_REQUIRED_ITEMS;
+            }
+
             if (!startArea.contains(getLocalPlayer()) && !dreamArea.contains(getLocalPlayer())) {
                 return State.WALK_TO_START;
             }
@@ -113,7 +118,12 @@ public class Main extends AbstractScript {
         }
 
 
+
+
         switch (getState()){
+            case GET_REQUIRED_ITEMS:
+                getRequiredEquipment();
+                break;
             case WALK_TO_START:
                 move();
                 break;
@@ -148,6 +158,7 @@ public class Main extends AbstractScript {
     private void fight(){
         long timeSinceLastOverloadDose = System.currentTimeMillis() - lastOverloadDose;
         long timeSinceLastPowerUpCheck = System.currentTimeMillis() - lastPowerUpCheck;
+        long timeSinceLastPowerSurge = System.currentTimeMillis() - lastPowerSurge;
         // Check Prayer
         if (!getPrayer().isActive(Prayer.PROTECT_FROM_MELEE)){
             log("turning on protect from melee");
@@ -191,7 +202,6 @@ public class Main extends AbstractScript {
         // Check for special spawns
         if (timeSinceLastPowerUpCheck >= 2000) {
             // Check Zapper
-            log("Checking for zapper");
 
             GameObject goZapper = getGameObjects().closest(gO -> gO.getName().contains("Zapper") && gO.hasAction("Activate"));
             if (goZapper != null && goZapper.hasAction("Activate")) {
@@ -205,7 +215,6 @@ public class Main extends AbstractScript {
             }
 
             // Check Power surge
-            log("Checking for power surge");
             GameObject goPowerSurge = getGameObjects().closest(i -> i.getName().contains("Power surge") && i.hasAction("Activate"));
             if (goPowerSurge != null && goPowerSurge.hasAction("Activate")) {
                 log("Power surge found");
@@ -215,15 +224,15 @@ public class Main extends AbstractScript {
                 sleep(700);
                 sleepUntil(() -> getLocalPlayer().isStandingStill(), 5000);
                 log("Power surge activated");
+                lastPowerSurge = System.currentTimeMillis();
+
             }
             lastPowerUpCheck = System.currentTimeMillis();
         }
         // Start speccing
-        if (getCombat().getSpecialPercentage() == 100) {
+        if (getCombat().getSpecialPercentage() >= 60 || timeSinceLastPowerSurge <= 46000 ) {
             useSpec = true;
-        }
-
-        if (getCombat().getSpecialPercentage() <= 20) {
+        } else {
             useSpec = false;
         }
 
@@ -255,6 +264,23 @@ public class Main extends AbstractScript {
             }
         }
 
+    }
+    private boolean verifyEquipment() {
+        if (dreamArea.contains(getLocalPlayer())){
+            return true;
+        } else {
+            if (getInventory().contains("Prayer potion(4)") && getInventory().contains("Overload (4)")){
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+
+    private void getRequiredEquipment() {
+        // Getting potions
+        log("restock not available yet, stopping script");
+        stop();
     }
     private void startDream() {
         NPC dominicOnion = getNpcs().closest("Dominic Onion");
@@ -294,15 +320,16 @@ public class Main extends AbstractScript {
             stop();
         }
         startTile = getLocalPlayer().getTile();
+        log("player starting X: " + startTile.getX() + " | Y: " + startTile.getY());
         getPrayer().toggle(true, Prayer.PROTECT_FROM_MELEE);
         sleep(500);
         getPrayer().toggle(false, Prayer.PROTECT_FROM_MELEE);
         // Walk north
         int currentX = startTile.getX();
         int currentY = startTile.getY();
-        Tile newStandingPosition = new Tile(currentX, currentY + Calculations.random(10,20));
+        Tile newStandingPosition = new Tile(currentX, currentY + Calculations.random(10,20), 3);
         getWalking().walk(newStandingPosition);
-        sleepUntil(() -> getLocalPlayer().isStandingStill(), 10000);
+        sleepUntil(() -> getLocalPlayer().getTile().distance(startTile) > 0 , 10000);
         // Chill for a few seconds before turning on prayer
         sleep(Calculations.random(5000,10000));
     }
