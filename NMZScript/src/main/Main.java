@@ -18,6 +18,7 @@ import org.dreambot.api.wrappers.items.GroundItem;
 import org.dreambot.api.wrappers.items.Item;
 import org.dreambot.api.wrappers.widgets.WidgetChild;
 import util.RunTimer;
+import util.ScriptVars;
 
 import java.awt.*;
 import java.util.List;
@@ -48,6 +49,7 @@ public class Main extends AbstractScript {
     private Item mainShield;
     private Item specWeapon;
     private RunTimer timer;
+    private ScriptVars sv = new ScriptVars();
     // TEST MODE
     private boolean testMode = false;
     // End TEST MODE
@@ -97,7 +99,12 @@ public class Main extends AbstractScript {
         lastOverloadDose = 0;
         lastPowerUpCheck = 0;
         mainWeapon = getEquipment().getItemInSlot(EquipmentSlot.WEAPON.getSlot());
-        mainShield = getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot());
+        if (getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot()) != null){
+            mainShield = getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot());
+        } else {
+            mainShield = null;
+        }
+
         specWeapon = getInventory().getItemInSlot(0);
         log("Main weapon: " + mainWeapon.getName());
         log("Main shield: " + mainShield.getName());
@@ -108,6 +115,7 @@ public class Main extends AbstractScript {
         getSkillTracker().start(Skill.HITPOINTS);
         getSkillTracker().start(Skill.RANGED);
         timer = new RunTimer();
+
         started = true;
     }
 
@@ -116,10 +124,6 @@ public class Main extends AbstractScript {
         if(getLocalPlayer().isMoving() && getClient().getDestination() != null && getLocalPlayer().distance(getClient().getDestination()) > Calculations.random(2,3)){
             return Calculations.random(200,300);
         }
-
-
-
-
         switch (getState()){
             case GET_REQUIRED_ITEMS:
                 getRequiredEquipment();
@@ -230,7 +234,7 @@ public class Main extends AbstractScript {
             lastPowerUpCheck = System.currentTimeMillis();
         }
         // Start speccing
-        if (getCombat().getSpecialPercentage() >= 60 || timeSinceLastPowerSurge <= 46000 ) {
+        if (getCombat().getSpecialPercentage() >= 100 || !(getCombat().getSpecialPercentage() < 40) || timeSinceLastPowerSurge <= 46000 ) {
             useSpec = true;
         } else {
             useSpec = false;
@@ -258,7 +262,7 @@ public class Main extends AbstractScript {
                 sleepUntil(() -> getEquipment().getItemInSlot(EquipmentSlot.WEAPON.getSlot()).getName().equals(mainWeapon.getName()), 600);
             }
 
-            if (getInventory().contains(mainShield.getName())) {
+            if (getInventory().contains(mainShield.getName()) && mainShield != null) {
                 getInventory().interact(mainShield.getName(), "Wield");
                 sleepUntil(() -> getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot()).getName().equals(mainWeapon.getName()), 600);
             }

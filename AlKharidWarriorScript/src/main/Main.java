@@ -180,7 +180,7 @@ public class Main extends AbstractScript {
             if (guard != null){
 
                 if (!getLocalPlayer().isInCombat()){
-                    log("attacking a guard");
+
                     guard.interact("Attack");
                     sleepUntil(() -> getLocalPlayer().isInCombat(), 1000);
                     searchGround = true;

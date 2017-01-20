@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="NMZScript">
+    <output-path>$USER_HOME$/DreamBot/Scripts</output-path>
+    <root id="archive" name="NMZScript.jar">
+      <element id="module-output" name="NMZScript" />
+    </root>
+  </artifact>
+</component>
