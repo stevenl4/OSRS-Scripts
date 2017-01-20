@@ -23,7 +23,7 @@ import java.util.List;
 /**
  * Created by steven.luo on 17/01/2017.
  */
-@ScriptManifest(category = Category.COMBAT, name = "Al-Kharid Warrior Fighter", author = "GB", version = 1.0, description = "Fights warriors, picks up herbs")
+@ScriptManifest(category = Category.COMBAT, name = "Al-Kharid Warrior Fighter", author = "GB", version = 1.0, description = "Fights warriors, picks up herbs, members only")
 public class Main extends AbstractScript {
 
     ScriptVars sv = new ScriptVars();
@@ -33,6 +33,7 @@ public class Main extends AbstractScript {
     List<PricedItem> lootTrack = new ArrayList<PricedItem>();
     private boolean started = false;
     private long lootTimerStart = 0;
+    private int totalProfit;
     private Area trainingArea = new Area (3282,3176,3286,3168,0);
 
     private enum State {
@@ -53,10 +54,11 @@ public class Main extends AbstractScript {
         }
 
         if (trainingArea.contains(getLocalPlayer()) && !getLocalPlayer().isInCombat() && searchGround){
-            log("running an item filter from setState");
+
             GroundItem gi = getGroundItems().closest(itemFilter);
             searchGround = false;
             if ( gi != null ) {
+
                 return State.LOOT;
             } else {
                 return State.ATTACK;
@@ -86,7 +88,7 @@ public class Main extends AbstractScript {
     Filter<NPC> guardFilter = new Filter<NPC>(){
         @Override
         public boolean match (NPC n){
-            log("running an npc filter");
+
             if (n == null || n.getActions() == null || n.getActions().length <= 0){
                 return false;
             }
@@ -110,11 +112,11 @@ public class Main extends AbstractScript {
     };
     @Override
     public void onStart() {
-        sv.loot = new String[] {"Grimy ranarr weed", "Grimy irit leaf", "Grimy avantoe", "Grimy kwuarm", "Grimy cadantine", "Grimy lantadyme",
-                                "Grimy dwarf weed"};
+        sv.loot = new String[]{"Grimy ranarr weed", "Grimy irit leaf", "Grimy avantoe", "Grimy kwuarm", "Grimy cadantine", "Grimy lantadyme",
+                "Grimy dwarf weed"};
 
-        for (int i = 0; i < sv.loot.length; i++){
-            lootTrack.add(new PricedItem(sv.loot[i], getClient().getMethodContext(), false));
+        for (int i = 0; i < sv.loot.length; i++) {
+            lootTrack.add(new PricedItem(sv.loot[i], getClient().getMethodContext(), true));
         }
         getSkillTracker().start(Skill.DEFENCE);
         getSkillTracker().start(Skill.ATTACK);
@@ -173,32 +175,37 @@ public class Main extends AbstractScript {
         if (getLocalPlayer().isInCombat() || getLocalPlayer().isAnimating()){
             antiban();
         } else {
+
             NPC guard = getNpcs().closest(guardFilter);
             if (guard != null){
-                searchTarget = false;
+
                 if (!getLocalPlayer().isInCombat()){
                     log("attacking a guard");
                     guard.interact("Attack");
                     sleepUntil(() -> getLocalPlayer().isInCombat(), 1000);
                     searchGround = true;
-                    searchTarget = true;
+
                     if (!getLocalPlayer().isInCombat()) {
                         getCamera().rotateToEntity(guard);
                     }
                 }
             }
+
+
+
+
         }
     }
     private void walkToTraining(){
         if (getWalking().walk(trainingArea.getRandomTile())){
             log("walking to training area");
-            sleepUntil(() -> getClient().getDestination().distance() < Calculations.random(3,5) || getLocalPlayer().isStandingStill(), Calculations.random(900,2500));
+            sleepUntil(() -> getLocalPlayer().distance(getClient().getDestination()) < Calculations.random(3,5) || !getLocalPlayer().isMoving(), Calculations.random(900,2500));
         }
     }
     private void walkToBank() {
         if (getWalking().walk(BankLocation.AL_KHARID.getArea(4).getRandomTile())){
             log("Walking to bank");
-            sleepUntil(() -> getClient().getDestination().distance() < Calculations.random(3,5) || getLocalPlayer().isStandingStill(), Calculations.random(900,2500));
+            sleepUntil(() -> getLocalPlayer().distance(getClient().getDestination()) < Calculations.random(3,5) || !getLocalPlayer().isMoving(), Calculations.random(900,2500));
         }
     }
     private void bank() {
@@ -213,20 +220,22 @@ public class Main extends AbstractScript {
     }
 
     private void loot() {
-        if (!getLocalPlayer().isInCombat()) {
-            log("running an item filter from loot");
-            final GroundItem gi = getGroundItems().closest(itemFilter);
-            if (gi != null) {
-                log("looting " + gi.getName());
-                gi.interact("Take");
-                lootTimerStart = System.currentTimeMillis();
-                sleepUntil(() -> !gi.exists(), 3000);
-                if (System.currentTimeMillis() - lootTimerStart > 3000){
-                    //taking too long to loot, probably stuck
-                    getCamera().rotateToTile(gi.getTile());
-                }
-                searchGround = true;
+
+        log("running an item filter from loot");
+        final GroundItem gi = getGroundItems().closest(itemFilter);
+        if (gi != null) {
+            log("looting " + gi.getName());
+            gi.interact("Take");
+            lootTimerStart = System.currentTimeMillis();
+            sleepUntil(() -> !gi.exists(), 3000);
+            if (System.currentTimeMillis() - lootTimerStart > 5000){
+                //taking too long to loot, probably stuck
+                getWalking().walk(gi.getTile());
             }
+            if (!gi.exists()) {
+                log("looted " + gi.getName());
+            }
+            searchGround = true;
         }
     }
 
@@ -273,7 +282,7 @@ public class Main extends AbstractScript {
 
         if (started){
             // limit to once every 3 seconds
-
+            totalProfit = 0;
             if (getState() != null){
                 g.drawString("State: " + getState().toString() , 5, 10);
             }
@@ -285,11 +294,11 @@ public class Main extends AbstractScript {
                 PricedItem p = lootTrack.get(i);
                 if (p != null){
                     String name = p.getName();
-                    g.drawString(name + " (p/h): " + p.getAmount() + "(" + timer.getPerHour(p.getAmount()) + ")", 400, (i + 1)* 15);
-
+                    g.drawString(name + " (p/h): " + p.getAmount() + "(" + timer.getPerHour(p.getAmount()) + ")" , 400, (i + 2)* 15);
+                    totalProfit += p.getValue();
                 }
             }
-
+            g.drawString("Total Profit (p/h): " + totalProfit + "(" + timer.getPerHour(totalProfit) + ")", 400, 15);
 
 
         }

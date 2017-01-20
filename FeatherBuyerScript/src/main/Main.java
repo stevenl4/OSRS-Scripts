@@ -1,6 +1,7 @@
 package main;
 
 import org.dreambot.api.methods.Calculations;
+import org.dreambot.api.methods.RSLoginResponse;
 import org.dreambot.api.methods.container.impl.Shop;
 import org.dreambot.api.methods.map.Area;
 import org.dreambot.api.script.AbstractScript;
@@ -96,7 +97,7 @@ public class Main extends AbstractScript {
             }
 
         }
-        if (hopWorlds){
+        if (hopWorlds || getClient().getLoginResponse().equals(RSLoginResponse.LOGIN_LIMIT_EXCEEDED)){
             return State.HOP;
         }
         if (getInventory().contains(sv.packName) && getInventory().isFull()){
@@ -165,7 +166,7 @@ public class Main extends AbstractScript {
         log("Hopping worlds to " + hopTo);
         getWorldHopper().quickHop(hopTo);
 
-        sleepUntil(() -> getClient().getInstance().getScriptManager().getCurrentScript().getRandomManager().isSolving(), 30000);
+        sleepUntil(() -> getClient().getInstance().getScriptManager().getCurrentScript().getRandomManager().isSolving(), 10000);
         hopWorlds = false;
     }
     private void walkToGE(){
