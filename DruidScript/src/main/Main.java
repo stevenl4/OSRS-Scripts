@@ -1,14 +1,22 @@
 package main;
 
+import gui.Gui;
 import org.dreambot.api.methods.Calculations;
 import org.dreambot.api.methods.container.impl.bank.BankLocation;
 import org.dreambot.api.methods.filter.Filter;
+import org.dreambot.api.methods.interactive.Players;
 import org.dreambot.api.methods.map.Area;
 import org.dreambot.api.methods.skills.Skill;
 import org.dreambot.api.methods.tabs.Tab;
+import org.dreambot.api.methods.world.World;
+import org.dreambot.api.randoms.RandomManager;
 import org.dreambot.api.script.AbstractScript;
+import org.dreambot.api.script.Category;
+import org.dreambot.api.script.ScriptManifest;
+import org.dreambot.api.wrappers.interactive.Character;
 import org.dreambot.api.wrappers.interactive.GameObject;
 import org.dreambot.api.wrappers.interactive.NPC;
+import org.dreambot.api.wrappers.interactive.Player;
 import org.dreambot.api.wrappers.items.GroundItem;
 import util.PricedItem;
 import util.RunTimer;
@@ -21,46 +29,58 @@ import java.util.stream.Stream;
 /**
  * Created by steven.luo on 20/01/2017.
  */
-public class Main extends AbstractScript {
 
-    private Area druidArea = new Area();
-    private Area druidEntranceArea = new Area();
-    private Area shortcutWest = new Area();
-    private Area shortcutEast = new Area();
-    private boolean shortcutUsed;
+@ScriptManifest(category = Category.COMBAT, name = "Chaos Druid Script", author = "GB" , version = 1.1, description = "Kills Chaos Druids in Ardy Tower, start in the bank")
+public class Main extends AbstractScript {
+    // TEST MODE -------------------------------------------------------------------------------------------------------
+    private boolean testMode = false;
+    // -----------------------------------------------------------------------------------------------------------------
+    private Area druidArea = new Area(2560,3358,2564,3354,0);
+    private Area druidEntranceArea = new Area(2565,3358,2566,3355,0);
+    private Area druidTowerDownStairs = new Area (2561,9757,2564,9755,0);
+    private Area druidTowerUpStairs = new Area (2560,3357,2561,3355,1);
+    private NPC druid;
     java.util.List<PricedItem> lootTrack = new ArrayList<PricedItem>();
     private long lastSearchGround;
+    private long lastScanPlayerCount;
     private long lootTimerStart;
     private boolean searchGround;
+    private boolean scanPlayerCount;
     ScriptVars sv = new ScriptVars();
     private RunTimer timer;
 
-    Filter<GroundItem> itemFilter = new Filter<GroundItem>(){
-        public boolean match(GroundItem gi){
+    Filter<GroundItem> itemFilter = gi -> {
 
-            if (gi == null || !gi.exists() || gi.getName() == null){
-                return false;
-            }
-            for (int i = 0; i < sv.loot.length; i++){
-                if (gi.getName().equals(sv.loot[i])){
-                    return true;
-                }
-            }
-
+        if (gi == null || !gi.exists() || gi.getName() == null){
             return false;
         }
+        for (int i = 0; i < sv.loot.length; i++){
+            if (gi.getName().equals(sv.loot[i])){
+                return true;
+            }
+        }
+        return false;
     };
 
     private enum State {
-        WALK_TO_TRAINING, WALK_TO_BANK, FIGHT, LOOT, BANK
+        WALK_TO_TRAINING, WALK_TO_BANK, FIGHT, LOOT, BANK, HOP, TEST
     }
 
     private State getState(){
+
+        if (sv.testMode){
+            return State.TEST;
+        }
         if (System.currentTimeMillis() - lastSearchGround > 1000){
             searchGround = true;
         }
 
-        if (getInventory().isFull()){
+        if (System.currentTimeMillis() - lastScanPlayerCount > 2000){
+            scanPlayerCount = true;
+        }
+
+        if ((getInventory().isFull() && !freeUpInventorySpace()) || getLocalPlayer().getHealthPercent() < 40){
+
             if (BankLocation.ARDOUGNE_WEST.getArea(4).contains(getLocalPlayer())){
                 return State.BANK;
             } else {
@@ -72,6 +92,7 @@ public class Main extends AbstractScript {
             return State.WALK_TO_TRAINING;
         } else {
             if (searchGround){
+
                 GroundItem gi = getGroundItems().closest(itemFilter);
                 lastSearchGround = System.currentTimeMillis();
                 searchGround = false;
@@ -79,15 +100,31 @@ public class Main extends AbstractScript {
                     return  State.LOOT;
                 }
             }
+            // count players in area
+            if (sv.hop && scanPlayerCount) {
+                lastScanPlayerCount = System.currentTimeMillis();
+                scanPlayerCount = false;
+                if (countPlayers() > 1) {
+                    return State.HOP;
+                }
+            }
             return State.FIGHT;
         }
     }
     @Override
     public void onStart() {
+
+        Gui gui = new Gui(sv);
+        gui.setVisible(true);
+        while (!sv.started){
+            sleep(1000);
+        }
+
         sv.uniqueLoot = new String[]{"Grimy avantoe", "Grimy irit leaf", "Grimy kwuarm", "Grimy ranarr weed", "Grimy lantadyme", "Grimy dwarf weed", "Grimy cadantine", "Law rune", "Nature rune", "Mithril bolts"};
         sv.loot = Stream.of(sv.uniqueLoot, sv.universalLoot).flatMap(Stream::of).distinct().toArray(String[]::new);
 
         for (int i = 0; i < sv.loot.length; i++) {
+            log("Looting: " + sv.loot[i]);
             lootTrack.add(new PricedItem(sv.loot[i], getClient().getMethodContext(), false));
         }
 
@@ -95,15 +132,15 @@ public class Main extends AbstractScript {
             getCombat().toggleAutoRetaliate(true);
         }
 
-        if (getSkills().getRealLevel(Skill.AGILITY) > 31){
-            sv.useShortcut = true;
-        }
         getSkillTracker().start(Skill.DEFENCE);
         getSkillTracker().start(Skill.ATTACK);
         getSkillTracker().start(Skill.STRENGTH);
         getSkillTracker().start(Skill.RANGED);
         timer = new RunTimer();
-        sv.started = true;
+        sv.testMode = testMode;
+        if (sv.testMode){
+            log("THIS IS A TESTING MODE");
+        }
     }
 
     @Override
@@ -117,6 +154,9 @@ public class Main extends AbstractScript {
         }
 
         switch (getState()){
+            case TEST:
+                test();
+                break;
             case FIGHT:
                 fight();
                 break;
@@ -132,26 +172,136 @@ public class Main extends AbstractScript {
             case BANK:
                 bank();
                 break;
+            case HOP:
+                hop();
+                break;
         }
         updateLoot();
         return Calculations.random(400,600);
     }
+    private void test(){
+        log ("This is a test");
 
+
+
+    }
+    private boolean freeUpInventorySpace() {
+        if (getInventory().isFull()){
+            for (int i = 0; i < 28; i ++ ){
+                if (getInventory().getItemInSlot(i).hasAction("Eat")){
+                    log("freed up an inventory space");
+                    getInventory().getItemInSlot(i).interact("Eat");
+                    return true;
+                }
+
+                if (getInventory().getItemInSlot(i).hasAction("Bury")){
+                    log("burying a bone that got picked up accidentally");
+                    getInventory().getItemInSlot(i).interact("Bury");
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        return true;
+    }
+    private void hop() {
+        log("hopping worlds, too many people");
+        World newWorld = getWorlds().getRandomWorld(w -> w.isMembers() && !w.isHighRisk() && !w.isLastManStanding() && !w.isDeadmanMode() && !w.isPVP() && !w.equals(getClient().getCurrentWorld()) && w.getMinimumLevel() < getSkills().getTotalLevel());
+        while (newWorld.getRealID() == getClient().getCurrentWorld()){
+            newWorld = getWorlds().getRandomWorld(w -> w.isMembers() && !w.isHighRisk() && !w.isLastManStanding() && !w.isDeadmanMode() && !w.isPVP() && !w.equals(getClient().getCurrentWorld()) && w.getMinimumLevel() < getSkills().getTotalLevel());
+        }
+        log("Hopping worlds to " + newWorld.getRealID());
+        getWorldHopper().quickHop(newWorld.getRealID());
+        sleepUntil(() -> getClient().getInstance().getScriptManager().getCurrentScript().getRandomManager().isSolving(), 5000);
+    }
+
+
+
+    private int countPlayers(){
+        Player[] players = getClient().getPlayers();
+        int playersInArea = 0;
+        for ( Player player : players ){
+            if (druidArea.contains(player)){
+                playersInArea++;
+            }
+        }
+        return playersInArea;
+    }
     private void fight(){
 
-        NPC druid = getNpcs().closest(n -> n.getName().equals("Chaos druid") &&
-                                            !n.isInCombat() &&
-                                            n.hasAction("Attack"));
-        if (getLocalPlayer().isInCombat()){
-            antiban();
-        } else {
-            if (druid != null) {
+
+        if (getCamera().getPitch() < 275){
+            getCamera().rotateToPitch(Calculations.random(275,375));
+        }
+
+        // Check if you need to eat food
+        if (getLocalPlayer().getHealthPercent() < 65){
+            if (getInventory().contains(sv.foodName)){
+                getInventory().get(sv.foodName).interact("Eat");
+            }
+        }
+        // Single combat area fighting
+        // Pick a target
+
+        if (selectNewTarget(druid)){
+            log("selecting new target");
+            druid = getNpcs().closest(n -> n.getName().equals("Chaos druid") && !n.isInCombat() && n.hasAction("Attack") && !n.isInteractedWith());
+        }
+
+        // Use special
+        if (getCombat().getSpecialPercentage() == 100){
+            getCombat().toggleSpecialAttack(true);
+        }
+
+        if (getLocalPlayer().isInCombat() || getLocalPlayer().isInteractedWith()){
+            if (getLocalPlayer().isAnimating() || getLocalPlayer().isInCombat()){
+                antiban();
+            } else {
+                log("re-engaging target");
                 druid.interact("Attack");
-                sleepUntil(() -> druid.isInCombat(), 2000);
+            }
+        } else {
+            if (druid != null && druid.getHealthPercent() > 0 && druid.exists()) {
+                log ("target selected");
+                druid.interact("Attack");
+                sleepUntil(druid::isInCombat, Calculations.random(400,800));
             }
         }
     }
 
+    private boolean selectNewTarget(NPC target){
+        // pick a new target when
+
+        //  - my selected target is dead
+        //  - my selected target is null
+        if (target == null){
+            log ("Selecting new target because current target is null");
+            return true;
+        }
+
+        if (!target.exists()){
+            log ("Selecting new target because current target does not exist");
+            return true;
+        }
+
+        if (target.getHealthPercent() == 0 ){
+            log ("Selecting new target because current target has 0 hp");
+            return true;
+        }
+//        if (target == null  || !target.exists() || target.getHealthPercent() == 0) {
+//            return true;
+//        }
+
+        //  - if multi-combat, select new target as long as current selected target is not already interacting with me
+        //  - if single-combat, select new target only if the current selected target is not being interacted with
+        if ((!target.isInteracting(getLocalPlayer()) && target.isInCombat())) {
+            log ("Selecting new target because target is in combat but not interacting with me");
+            return true;
+        }
+
+        return false;
+    }
     private void loot(){
         final GroundItem gi = getGroundItems().closest(itemFilter);
         if (gi != null && getMap().canReach(gi)) {
@@ -161,10 +311,14 @@ public class Main extends AbstractScript {
             sleepUntil(() -> !gi.exists(), 3000);
             if (System.currentTimeMillis() - lootTimerStart > 5000){
                 //taking too long to loot, probably stuck
-                getWalking().walk(gi.getTile());
+                getCamera().rotateToYaw(Calculations.random(370,383));
+                getCamera().rotateToEntity(gi);
             }
+
             if (!gi.exists()) {
                 log("looted " + gi.getName());
+                // Chain loot
+                searchGround = true;
             }
         }
     }
@@ -177,24 +331,7 @@ public class Main extends AbstractScript {
                 sleepUntil(() -> !druidArea.contains(getLocalPlayer()), 1500);
             }
         } else {
-            if (sv.useShortcut){
-                if (!shortcutUsed){
-                    // Walk towards West side of shortcut
-                    if (shortcutWest.contains(getLocalPlayer())){
-                        // TODO: Use shortcut to get to bank
-                        sleepUntil(() -> shortcutEast.contains(getLocalPlayer()), 3000);
-                    }
-                    if (shortcutEast.contains(getLocalPlayer())){
-                        shortcutUsed = true;
-                    }
-
-                } else {
-                    getWalking().walk(BankLocation.ARDOUGNE_WEST.getArea(3).getRandomTile());
-                }
-
-            } else {
-                getWalking().walk(BankLocation.ARDOUGNE_WEST.getArea(3).getRandomTile());
-            }
+            getWalking().walk(BankLocation.ARDOUGNE_WEST.getArea(3).getRandomTile());
 
         }
     }
@@ -206,34 +343,37 @@ public class Main extends AbstractScript {
             sleepUntil(() -> !getBank().isOpen(), 1500);
         }
 
-        // Check if player climbed up ladder by accident
-
-        // Check of player climbed down ladder by accident
-
+        // Check if player climbed down ladder by accident
+        if (druidTowerDownStairs.contains(getLocalPlayer())){
+            log("Went down stairs by accident, going up now");
+            GameObject ladder = getGameObjects().closest(l -> l.getName().equals("Ladder") && l.hasAction("Climb-up"));
+            if (ladder != null) {
+                ladder.interact();
+                sleepUntil(() -> druidArea.contains(getLocalPlayer()), 1500);
+                log("Went up successfully");
+            }
+        }
+        // Check of player climbed up ladder by accident
+        if (druidTowerUpStairs.contains(getLocalPlayer())){
+            log("Went upstairs by accident, going down now");
+            GameObject ladder = getGameObjects().closest(l -> l.getName().equals("Ladder") && l.hasAction("Climb-down"));
+            if (ladder != null){
+                ladder.interact();
+                sleepUntil(() -> druidArea.contains(getLocalPlayer()), 1500);
+                log("Went downstairs successfully");
+            }
+        }
         GameObject door = getGameObjects().closest(11723);
         if (getLocalPlayer().distance(door) < Calculations.random(4,6) && door != null){
+            log ("Near door, pick-locking that shit");
             door.interact("Pick-lock");
             sleepUntil(() -> druidArea.contains(getLocalPlayer()), 1500);
+            log ("Got in successfully");
+            // reset the target
+            druid = null;
         } else {
-            // Check if shortcut is needed
-            if (sv.useShortcut){
-                if (!shortcutUsed){
-                    // Walk to East side of short cut
-                    if (shortcutEast.contains(getLocalPlayer())){
-                        // TODO: Use shortcut to get to training
 
-                        sleepUntil(() -> shortcutWest.contains(getLocalPlayer()),3000);
-                    }
-                    if (shortcutWest.contains(getLocalPlayer())){
-                        shortcutUsed = true;
-                    }
-
-                } else {
-                    getWalking().walk(druidEntranceArea.getRandomTile());
-                }
-            } else {
-                getWalking().walk(druidEntranceArea.getRandomTile());
-            }
+            getWalking().walk(druidEntranceArea.getRandomTile());
 
         }
     }
@@ -243,7 +383,12 @@ public class Main extends AbstractScript {
             log("depositing all items");
             getBank().depositAllItems();
             sleepUntil(() -> getInventory().isEmpty(), 1000);
-            shortcutUsed = false;
+            if (sv.requiredFoodAmt > 0){
+                getBank().withdraw(sv.foodName, sv.requiredFoodAmt);
+                sleepUntil(() -> getInventory().contains(sv.foodName), 1500);
+            }
+            getBank().close();
+
         } else {
             getBank().open(BankLocation.ARDOUGNE_WEST);
             sleepUntil(() -> getBank().isOpen(), 1500);
@@ -274,7 +419,7 @@ public class Main extends AbstractScript {
                 }
                 sleepUntil(()-> !getLocalPlayer().isInCombat() || !getLocalPlayer().isAnimating(),Calculations.random(300, 500));
             }
-        } else if (random <= 25) {
+        } else if (random <= 30) {
             if (!getTabs().isOpen(Tab.INVENTORY)){
                 getTabs().open(Tab.INVENTORY);
             }
@@ -286,8 +431,31 @@ public class Main extends AbstractScript {
             }
         }
     }
+
+    public long getGainedExperience(){
+        long atk = getSkillTracker().getGainedExperience(Skill.ATTACK);
+        long str = getSkillTracker().getGainedExperience(Skill.STRENGTH);
+        long def = getSkillTracker().getGainedExperience(Skill.DEFENCE);
+        long range = getSkillTracker().getGainedExperience(Skill.RANGED);
+        return atk + str + def + range;
+    }
+
     @Override
-    public void onPaint(Graphics graphics) {
-        super.onPaint(graphics);
+    public void onPaint(Graphics g) {
+        if (sv.started) {
+            g.drawString("State: " + getState().toString(),5,10);
+            g.drawString("Runtime: " + timer.format(), 5, 30);
+            g.drawString("Experience (p/h): " + getGainedExperience() + "(" + timer.getPerHour(getGainedExperience()) + ")", 5, 45);
+
+
+            for (int i = 0; i < lootTrack.size(); i++){
+                PricedItem p = lootTrack.get(i);
+                if (p != null){
+                    String name = p.getName();
+                    g.drawString(name + " (p/h): " + p.getAmount() + "(" + timer.getPerHour(p.getAmount()) + ")" , 400, (i + 1)* 15);
+                }
+            }
+        }
+
     }
 }

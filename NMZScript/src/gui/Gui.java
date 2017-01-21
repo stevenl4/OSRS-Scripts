@@ -11,6 +11,8 @@ import java.awt.event.ActionListener;
 /**
  * Created by steven.luo on 19/01/2017.
  */
+
+// TODO finish GUI
 public class Gui extends JFrame {
     private JPanel contentPane;
 

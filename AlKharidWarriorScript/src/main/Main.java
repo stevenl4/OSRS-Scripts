@@ -35,6 +35,7 @@ public class Main extends AbstractScript {
     private boolean started = false;
     private long lootTimerStart = 0;
     private int totalProfit;
+    // TODO expand the training area
     private Area trainingArea = new Area (3282,3176,3286,3168,0);
 
     private enum State {
@@ -42,6 +43,8 @@ public class Main extends AbstractScript {
     }
 
     private State getState() {
+
+
         if (System.currentTimeMillis() - lastSearchGround > 1500){
             searchGround = true;
         }
@@ -177,6 +180,7 @@ public class Main extends AbstractScript {
         }
     }
     private void attack(){
+        // TODO Update combat logic
         if (getLocalPlayer().isInCombat() || getLocalPlayer().isAnimating()){
             antiban();
         } else {
