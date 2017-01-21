@@ -71,6 +71,7 @@ public class Main extends AbstractScript {
         if (sv.testMode){
             return State.TEST;
         }
+
         if (System.currentTimeMillis() - lastSearchGround > 1000){
             searchGround = true;
         }
@@ -80,7 +81,6 @@ public class Main extends AbstractScript {
         }
 
         if ((getInventory().isFull() && !freeUpInventorySpace()) || getLocalPlayer().getHealthPercent() < 40){
-
             if (BankLocation.ARDOUGNE_WEST.getArea(4).contains(getLocalPlayer())){
                 return State.BANK;
             } else {
@@ -90,27 +90,34 @@ public class Main extends AbstractScript {
 
         if (!druidArea.contains(getLocalPlayer())){
             return State.WALK_TO_TRAINING;
-        } else {
-            if (searchGround){
+        }
 
-                GroundItem gi = getGroundItems().closest(itemFilter);
-                lastSearchGround = System.currentTimeMillis();
-                searchGround = false;
-                if (gi != null ){
-                    return  State.LOOT;
-                }
+        // count players in area
+        if (sv.hop && scanPlayerCount && druidArea.contains(getLocalPlayer())) {
+            lastScanPlayerCount = System.currentTimeMillis();
+            scanPlayerCount = false;
+            if (countPlayers() > 1) {
+                return State.HOP;
+            } else {
+                return State.FIGHT;
             }
-            // count players in area
-            if (sv.hop && scanPlayerCount) {
-                lastScanPlayerCount = System.currentTimeMillis();
-                scanPlayerCount = false;
-                if (countPlayers() > 1) {
-                    return State.HOP;
-                }
+        } else if (searchGround && druidArea.contains(getLocalPlayer())){
+            GroundItem gi = getGroundItems().closest(itemFilter);
+            lastSearchGround = System.currentTimeMillis();
+            searchGround = false;
+            if (gi != null ){
+                return  State.LOOT;
+            } else {
+                return State.FIGHT;
             }
+        } else {
             return State.FIGHT;
         }
+
+
     }
+
+
     @Override
     public void onStart() {
 
@@ -153,6 +160,7 @@ public class Main extends AbstractScript {
             getWalking().toggleRun();
         }
 
+        log("State: " + getState().toString());
         switch (getState()){
             case TEST:
                 test();
@@ -180,7 +188,7 @@ public class Main extends AbstractScript {
         return Calculations.random(400,600);
     }
     private void test(){
-        log ("This is a test");
+        log ("This is a test and im being reached");
 
 
 
@@ -446,7 +454,7 @@ public class Main extends AbstractScript {
             g.drawString("State: " + getState().toString(),5,10);
             g.drawString("Runtime: " + timer.format(), 5, 30);
             g.drawString("Experience (p/h): " + getGainedExperience() + "(" + timer.getPerHour(getGainedExperience()) + ")", 5, 45);
-
+            g.drawString("Time Since Last Scan: " + (System.currentTimeMillis() - lastScanPlayerCount), 5,60);
 
             for (int i = 0; i < lootTrack.size(); i++){
                 PricedItem p = lootTrack.get(i);
