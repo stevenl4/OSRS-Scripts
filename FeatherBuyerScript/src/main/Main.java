@@ -167,7 +167,10 @@ public class Main extends AbstractScript {
         getWorldHopper().quickHop(hopTo);
 
         sleepUntil(() -> getClient().getInstance().getScriptManager().getCurrentScript().getRandomManager().isSolving(), 10000);
-        hopWorlds = false;
+        if (shopArea.contains(getLocalPlayer()) && getClient().getCurrentWorld() == hopTo){
+            hopWorlds = false;
+        }
+
     }
     private void walkToGE(){
 
