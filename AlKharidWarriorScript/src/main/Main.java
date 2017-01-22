@@ -47,7 +47,7 @@ public class Main extends AbstractScript {
         if (System.currentTimeMillis() - lastSearchGround > 1500){
             searchGround = true;
         }
-
+        // TODO this might mess up logic
         if (getLocalPlayer().getHealthPercent() < 65 && getInventory().contains(sv.foodName)){
             return State.EAT;
         }
@@ -187,10 +187,11 @@ public class Main extends AbstractScript {
     }
 
     private void eat() {
-        if (getTabs().isOpen(Tab.INVENTORY)){
-            getTabs().open(Tab.INVENTORY);
-        }
+
         if (getInventory().contains(sv.foodName)){
+            if (getTabs().isOpen(Tab.INVENTORY)){
+                getTabs().open(Tab.INVENTORY);
+            }
             getInventory().get(sv.foodName).interact("Eat");
             sleepUntil(() -> !getLocalPlayer().isAnimating(), 1000);
         }
