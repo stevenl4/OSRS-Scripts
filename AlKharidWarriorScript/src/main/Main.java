@@ -32,14 +32,13 @@ public class Main extends AbstractScript {
     private boolean searchGround;
     private boolean searchTarget;
     List<PricedItem> lootTrack = new ArrayList<PricedItem>();
-    private boolean started = false;
     private long lootTimerStart = 0;
     private int totalProfit;
-    // TODO expand the training area
-    private Area trainingArea = new Area (3282,3176,3286,3168,0);
+    private NPC guard;
+    private Area trainingArea = new Area (3282,3176,3292,3168,0);
 
     private enum State {
-        ATTACK, LOOT, WALK_TO_BANK, WALK_TO_TRAINING, BANK
+        ATTACK, LOOT, WALK_TO_BANK, WALK_TO_TRAINING, BANK, EAT
     }
 
     private State getState() {
@@ -49,7 +48,11 @@ public class Main extends AbstractScript {
             searchGround = true;
         }
 
-        if (getInventory().isFull()){
+        if (getLocalPlayer().getHealthPercent() < 65 && getInventory().contains(sv.foodName)){
+            return State.EAT;
+        }
+
+        if (getInventory().isFull() || getLocalPlayer().getHealthPercent() < 35){
             if(BankLocation.AL_KHARID.getArea(4).contains(getLocalPlayer())){
                 return State.BANK;
             } else {
@@ -133,7 +136,7 @@ public class Main extends AbstractScript {
         log("Starting al-kharid warrior killer");
         timer = new RunTimer();
         sv.started = true;
-        started = true;
+
         searchGround = true;
         searchTarget = true;
     }
@@ -169,6 +172,9 @@ public class Main extends AbstractScript {
             case BANK:
                 bank();
                 break;
+            case EAT:
+                eat();
+                break;
         }
         updateLoot();
         return Calculations.random(200,400);
@@ -179,31 +185,79 @@ public class Main extends AbstractScript {
             p.update();
         }
     }
-    private void attack(){
-        // TODO Update combat logic
-        if (getLocalPlayer().isInCombat() || getLocalPlayer().isAnimating()){
-            antiban();
-        } else {
 
-            NPC guard = getNpcs().closest(guardFilter);
-            if (guard != null){
-
-                if (!getLocalPlayer().isInCombat()){
-
-                    guard.interact("Attack");
-                    sleepUntil(() -> getLocalPlayer().isInCombat(), 1000);
-                    searchGround = true;
-
-                    if (!getLocalPlayer().isInCombat()) {
-                        getCamera().rotateToEntity(guard);
-                    }
-                }
-            }
-
-
-
-
+    private void eat() {
+        if (getTabs().isOpen(Tab.INVENTORY)){
+            getTabs().open(Tab.INVENTORY);
         }
+        if (getInventory().contains(sv.foodName)){
+            getInventory().get(sv.foodName).interact("Eat");
+            sleepUntil(() -> !getLocalPlayer().isAnimating(), 1000);
+        }
+    }
+
+    private void attack(){
+        if (getCamera().getPitch() < 275){
+            getCamera().rotateToPitch(Calculations.random(275,375));
+        }
+
+
+        // Single combat area fighting
+        // Pick a target
+
+        if (selectNewTarget(guard)){
+            log("selecting new target");
+            guard = getNpcs().closest(guardFilter);
+        }
+
+
+        if (getLocalPlayer().isInCombat() || getLocalPlayer().isInteractedWith()){
+            if (getLocalPlayer().isAnimating() || getLocalPlayer().isInCombat()){
+                antiban();
+            } else {
+                log("re-engaging target");
+                guard.interact("Attack");
+            }
+        } else {
+            if (guard != null && guard.getHealthPercent() > 0 && guard.exists()) {
+                log ("target selected");
+                guard.interact("Attack");
+                sleepUntil(guard::isInCombat, Calculations.random(400,800));
+            }
+        }
+    }
+
+    private boolean selectNewTarget(NPC target){
+        // pick a new target when
+
+        //  - my selected target is dead
+        //  - my selected target is null
+        if (target == null){
+            log ("Selecting new target because current target is null");
+            return true;
+        }
+
+        if (!target.exists()){
+            log ("Selecting new target because current target does not exist");
+            return true;
+        }
+
+        if (target.getHealthPercent() == 0 ){
+            log ("Selecting new target because current target has 0 hp");
+            return true;
+        }
+//        if (target == null  || !target.exists() || target.getHealthPercent() == 0) {
+//            return true;
+//        }
+
+        //  - if multi-combat, select new target as long as current selected target is not already interacting with me
+        //  - if single-combat, select new target only if the current selected target is not being interacted with
+        if ((!target.isInteracting(getLocalPlayer()) && target.isInCombat())) {
+            log ("Selecting new target because target is in combat but not interacting with me");
+            return true;
+        }
+
+        return false;
     }
     private void walkToTraining(){
         if (getWalking().walk(trainingArea.getRandomTile())){
@@ -222,6 +276,10 @@ public class Main extends AbstractScript {
             log("depositing all items");
             getBank().depositAllItems();
             sleepUntil(() -> getInventory().isEmpty(), 1000);
+            getBank().withdraw(sv.foodName, sv.requiredFoodAmt);
+            sleepUntil(() -> getInventory().contains(sv.foodName), 1000);
+            getBank().close();
+
         } else {
             getBank().open(BankLocation.AL_KHARID);
             sleepUntil(() -> getBank().isOpen(), 1500);
@@ -288,7 +346,7 @@ public class Main extends AbstractScript {
 
     public void onPaint(Graphics g){
 
-        if (started){
+        if (sv.started){
             // limit to once every 3 seconds
             totalProfit = 0;
             if (getState() != null){
@@ -297,16 +355,18 @@ public class Main extends AbstractScript {
             g.drawString("Runtime: " + timer.format(), 5, 30);
             g.drawString("Experience (p/h): " + getGainedExperience() + "(" + timer.getPerHour(getGainedExperience()) + ")", 5, 45);
 
-
-            for (int i = 0; i < lootTrack.size(); i++){
-                PricedItem p = lootTrack.get(i);
-                if (p != null){
-                    String name = p.getName();
-                    g.drawString(name + " (p/h): " + p.getAmount() + "(" + timer.getPerHour(p.getAmount()) + ")" , 400, (i + 2)* 15);
-                    totalProfit += p.getValue();
+            if (!getWorlds().f2p().contains(getClient().getCurrentWorld())) {
+                for (int i = 0; i < lootTrack.size(); i++){
+                    PricedItem p = lootTrack.get(i);
+                    if (p != null){
+                        String name = p.getName();
+                        g.drawString(name + " (p/h): " + p.getAmount() + "(" + timer.getPerHour(p.getAmount()) + ")" , 400, (i + 2)* 15);
+                        totalProfit += p.getValue();
+                    }
                 }
+                g.drawString("Total Profit (p/h): " + totalProfit + "(" + timer.getPerHour(totalProfit) + ")", 400, 15);
             }
-            g.drawString("Total Profit (p/h): " + totalProfit + "(" + timer.getPerHour(totalProfit) + ")", 400, 15);
+
 
 
         }

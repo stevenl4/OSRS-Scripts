@@ -5,5 +5,7 @@ package util;
  */
 public class ScriptVars {
     public String[] loot;
+    public String foodName;
+    public int requiredFoodAmt;
     public boolean started = false;
 }
