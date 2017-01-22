@@ -160,7 +160,6 @@ public class Main extends AbstractScript {
             getWalking().toggleRun();
         }
 
-        log("State: " + getState().toString());
         switch (getState()){
             case TEST:
                 test();
