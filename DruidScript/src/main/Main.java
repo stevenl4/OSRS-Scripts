@@ -45,6 +45,7 @@ public class Main extends AbstractScript {
     private long lootTimerStart;
     private boolean searchGround;
     private boolean scanPlayerCount;
+    private GroundItem gi;
     ScriptVars sv = new ScriptVars();
     private RunTimer timer;
 
@@ -66,22 +67,16 @@ public class Main extends AbstractScript {
     }
 
     private State getState(){
-
-        if (sv.testMode){
-            return State.TEST;
-        }
-
-        if (System.currentTimeMillis() - lastSearchGround > 400){
-            searchGround = true;
+        int playersInArea = 1;
+        if (System.currentTimeMillis() - lastSearchGround > 1000 && druidArea.contains(getLocalPlayer())){
+            gi = getGroundItems().closest(itemFilter);
         }
 
         if (System.currentTimeMillis() - lastScanPlayerCount > 2000){
-            scanPlayerCount = true;
+            lastScanPlayerCount = System.currentTimeMillis();
+            playersInArea = countPlayers();
         }
 
-        if (getLocalPlayer().getHealthPercent() < 65 && getInventory().contains(sv.foodName)){
-            return State.EAT;
-        }
 
         if ((getInventory().isFull() && !freeUpInventorySpace()) || getLocalPlayer().getHealthPercent() < 40){
             if (BankLocation.ARDOUGNE_WEST.getArea(4).contains(getLocalPlayer())){
@@ -89,35 +84,28 @@ public class Main extends AbstractScript {
             } else {
                 return State.WALK_TO_BANK;
             }
-        }
-
-        if (!druidArea.contains(getLocalPlayer())){
-            return State.WALK_TO_TRAINING;
-        }
-
-        // count players in area
-        if (sv.hop && scanPlayerCount && druidArea.contains(getLocalPlayer())) {
-            lastScanPlayerCount = System.currentTimeMillis();
-            scanPlayerCount = false;
-            if (countPlayers() > 1) {
-                return State.HOP;
-            } else {
-                return State.FIGHT;
-            }
-        } else if (searchGround && druidArea.contains(getLocalPlayer())){
-            GroundItem gi = getGroundItems().closest(itemFilter);
-            lastSearchGround = System.currentTimeMillis();
-            searchGround = false;
-            if (gi != null ){
-                return  State.LOOT;
-            } else {
-                return State.FIGHT;
-            }
         } else {
-            return State.FIGHT;
+            if (getLocalPlayer().getHealthPercent() < 65 && getInventory().contains(sv.foodName)){
+                return State.EAT;
+            } else {
+                if (!druidArea.contains(getLocalPlayer())){
+                    return State.WALK_TO_TRAINING;
+                } else {
+                    if (sv.hop && playersInArea > 1){
+                        log("Returning State.HOP");
+                        return State.HOP;
+                    } else {
+                        // count players in area
+                        if (gi != null){
+                           return State.LOOT;
+
+                        } else {
+                            return State.FIGHT;
+                        }
+                    }
+                }
+            }
         }
-
-
     }
 
 
@@ -155,6 +143,8 @@ public class Main extends AbstractScript {
 
     @Override
     public int onLoop() {
+
+
         if(getLocalPlayer().isMoving() && getClient().getDestination() != null && getClient().getDestination().distance(getLocalPlayer()) > 3) {
             return Calculations.random(200,300);
         }
@@ -171,7 +161,7 @@ public class Main extends AbstractScript {
                 fight();
                 break;
             case LOOT:
-                loot();
+                loot(gi);
                 break;
             case WALK_TO_BANK:
                 walkToBank();
@@ -183,6 +173,7 @@ public class Main extends AbstractScript {
                 bank();
                 break;
             case HOP:
+                log("I should appear after State.HOP");
                 hop();
                 break;
             case EAT:
@@ -197,18 +188,24 @@ public class Main extends AbstractScript {
 
     }
     private boolean freeUpInventorySpace() {
-        if (getTabs().isOpen(Tab.INVENTORY)){
-            getTabs().open(Tab.INVENTORY);
-        }
+
         if (getInventory().isFull()){
             for (int i = 0; i < 28; i ++ ){
                 if (getInventory().getItemInSlot(i).hasAction("Eat")){
                     log("freed up an inventory space");
+                    if (getTabs().isOpen(Tab.INVENTORY)){
+                        getTabs().open(Tab.INVENTORY);
+                        sleepUntil(() -> getTabs().isOpen(Tab.INVENTORY),1000);
+                    }
                     getInventory().getItemInSlot(i).interact("Eat");
                     return true;
                 }
 
                 if (getInventory().getItemInSlot(i).hasAction("Bury")){
+                    if (getTabs().isOpen(Tab.INVENTORY)){
+                        getTabs().open(Tab.INVENTORY);
+                        sleepUntil(() -> getTabs().isOpen(Tab.INVENTORY),1000);
+                    }
                     log("burying a bone that got picked up accidentally");
                     getInventory().getItemInSlot(i).interact("Bury");
                     return true;
@@ -248,6 +245,10 @@ public class Main extends AbstractScript {
             getTabs().open(Tab.INVENTORY);
         }
         if (getInventory().contains(sv.foodName)){
+            if (getTabs().isOpen(Tab.INVENTORY)){
+                getTabs().open(Tab.INVENTORY);
+                sleepUntil(() -> getTabs().isOpen(Tab.INVENTORY),1000);
+            }
             getInventory().get(sv.foodName).interact("Eat");
             sleepUntil(() -> !getLocalPlayer().isAnimating(), 1000);
         }
@@ -320,8 +321,7 @@ public class Main extends AbstractScript {
 
         return false;
     }
-    private void loot(){
-        final GroundItem gi = getGroundItems().closest(itemFilter);
+    private void loot(GroundItem gi){
         if (gi != null && getMap().canReach(gi)) {
             log("looting " + gi.getName());
             gi.interact("Take");
@@ -329,14 +329,9 @@ public class Main extends AbstractScript {
             sleepUntil(() -> !gi.exists(), 3000);
             if (System.currentTimeMillis() - lootTimerStart > 5000){
                 //taking too long to loot, probably stuck
+                getWalking().walkExact(gi.getTile());
                 getCamera().rotateToYaw(Calculations.random(370,383));
                 getCamera().rotateToEntity(gi);
-            }
-
-            if (!gi.exists()) {
-                log("looted " + gi.getName());
-                // Chain loot
-                searchGround = true;
             }
         }
     }
@@ -464,7 +459,7 @@ public class Main extends AbstractScript {
             g.drawString("State: " + getState().toString(),5,10);
             g.drawString("Runtime: " + timer.format(), 5, 30);
             g.drawString("Experience (p/h): " + getGainedExperience() + "(" + timer.getPerHour(getGainedExperience()) + ")", 5, 45);
-            g.drawString("Time Since Last Scan: " + (System.currentTimeMillis() - lastScanPlayerCount), 5,60);
+            g.drawString("Players in area: " + countPlayers(), 5,60);
 
             for (int i = 0; i < lootTrack.size(); i++){
                 PricedItem p = lootTrack.get(i);
