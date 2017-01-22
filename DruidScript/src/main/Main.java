@@ -9,7 +9,6 @@ import org.dreambot.api.methods.map.Area;
 import org.dreambot.api.methods.skills.Skill;
 import org.dreambot.api.methods.tabs.Tab;
 import org.dreambot.api.methods.world.World;
-import org.dreambot.api.randoms.RandomManager;
 import org.dreambot.api.script.AbstractScript;
 import org.dreambot.api.script.Category;
 import org.dreambot.api.script.ScriptManifest;
@@ -63,7 +62,7 @@ public class Main extends AbstractScript {
     };
 
     private enum State {
-        WALK_TO_TRAINING, WALK_TO_BANK, FIGHT, LOOT, BANK, HOP, TEST
+        WALK_TO_TRAINING, WALK_TO_BANK, FIGHT, LOOT, BANK, HOP, EAT, TEST
     }
 
     private State getState(){
@@ -72,12 +71,16 @@ public class Main extends AbstractScript {
             return State.TEST;
         }
 
-        if (System.currentTimeMillis() - lastSearchGround > 1000){
+        if (System.currentTimeMillis() - lastSearchGround > 400){
             searchGround = true;
         }
 
         if (System.currentTimeMillis() - lastScanPlayerCount > 2000){
             scanPlayerCount = true;
+        }
+
+        if (getLocalPlayer().getHealthPercent() < 65 && getInventory().contains(sv.foodName)){
+            return State.EAT;
         }
 
         if ((getInventory().isFull() && !freeUpInventorySpace()) || getLocalPlayer().getHealthPercent() < 40){
@@ -182,6 +185,9 @@ public class Main extends AbstractScript {
             case HOP:
                 hop();
                 break;
+            case EAT:
+                eat();
+                break;
         }
         updateLoot();
         return Calculations.random(400,600);
@@ -189,10 +195,11 @@ public class Main extends AbstractScript {
     private void test(){
         log ("This is a test and im being reached");
 
-
-
     }
     private boolean freeUpInventorySpace() {
+        if (getTabs().isOpen(Tab.INVENTORY)){
+            getTabs().open(Tab.INVENTORY);
+        }
         if (getInventory().isFull()){
             for (int i = 0; i < 28; i ++ ){
                 if (getInventory().getItemInSlot(i).hasAction("Eat")){
@@ -235,6 +242,16 @@ public class Main extends AbstractScript {
         }
         return playersInArea;
     }
+
+    private void eat() {
+        if (getTabs().isOpen(Tab.INVENTORY)){
+            getTabs().open(Tab.INVENTORY);
+        }
+        if (getInventory().contains(sv.foodName)){
+            getInventory().get(sv.foodName).interact("Eat");
+            sleepUntil(() -> !getLocalPlayer().isAnimating(), 1000);
+        }
+    }
     private void fight(){
 
 
@@ -242,12 +259,6 @@ public class Main extends AbstractScript {
             getCamera().rotateToPitch(Calculations.random(275,375));
         }
 
-        // Check if you need to eat food
-        if (getLocalPlayer().getHealthPercent() < 65){
-            if (getInventory().contains(sv.foodName)){
-                getInventory().get(sv.foodName).interact("Eat");
-            }
-        }
         // Single combat area fighting
         // Pick a target
 
