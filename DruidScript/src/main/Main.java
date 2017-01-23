@@ -43,8 +43,6 @@ public class Main extends AbstractScript {
     private long lastSearchGround;
     private long lastScanPlayerCount;
     private long lootTimerStart;
-    private boolean searchGround;
-    private boolean scanPlayerCount;
     private GroundItem gi;
     ScriptVars sv = new ScriptVars();
     private RunTimer timer;
@@ -79,6 +77,9 @@ public class Main extends AbstractScript {
 
 
         if ((getInventory().isFull() && !freeUpInventorySpace()) || getLocalPlayer().getHealthPercent() < 40){
+            if (!getTabs().isOpen(Tab.INVENTORY)){
+                getTabs().open(Tab.INVENTORY);
+            }
             if (BankLocation.ARDOUGNE_WEST.getArea(4).contains(getLocalPlayer())){
                 return State.BANK;
             } else {
@@ -95,7 +96,6 @@ public class Main extends AbstractScript {
                         log("Returning State.HOP");
                         return State.HOP;
                     } else {
-                        // count players in area
                         if (gi != null){
                            return State.LOOT;
 
@@ -126,9 +126,7 @@ public class Main extends AbstractScript {
             lootTrack.add(new PricedItem(sv.loot[i], getClient().getMethodContext(), false));
         }
 
-        if (!getCombat().isAutoRetaliateOn()){
-            getCombat().toggleAutoRetaliate(true);
-        }
+
 
         getSkillTracker().start(Skill.DEFENCE);
         getSkillTracker().start(Skill.ATTACK);
@@ -143,7 +141,9 @@ public class Main extends AbstractScript {
 
     @Override
     public int onLoop() {
-
+        if (!getCombat().isAutoRetaliateOn()){
+            getCombat().toggleAutoRetaliate(true);
+        }
 
         if(getLocalPlayer().isMoving() && getClient().getDestination() != null && getClient().getDestination().distance(getLocalPlayer()) > 3) {
             return Calculations.random(200,300);
@@ -173,7 +173,6 @@ public class Main extends AbstractScript {
                 bank();
                 break;
             case HOP:
-                log("I should appear after State.HOP");
                 hop();
                 break;
             case EAT:
@@ -193,7 +192,7 @@ public class Main extends AbstractScript {
             for (int i = 0; i < 28; i ++ ){
                 if (getInventory().getItemInSlot(i).hasAction("Eat")){
                     log("freed up an inventory space");
-                    if (getTabs().isOpen(Tab.INVENTORY)){
+                    if (!getTabs().isOpen(Tab.INVENTORY)){
                         getTabs().open(Tab.INVENTORY);
                         sleepUntil(() -> getTabs().isOpen(Tab.INVENTORY),1000);
                     }
@@ -202,7 +201,7 @@ public class Main extends AbstractScript {
                 }
 
                 if (getInventory().getItemInSlot(i).hasAction("Bury")){
-                    if (getTabs().isOpen(Tab.INVENTORY)){
+                    if (!getTabs().isOpen(Tab.INVENTORY)){
                         getTabs().open(Tab.INVENTORY);
                         sleepUntil(() -> getTabs().isOpen(Tab.INVENTORY),1000);
                     }
@@ -241,11 +240,11 @@ public class Main extends AbstractScript {
     }
 
     private void eat() {
-        if (getTabs().isOpen(Tab.INVENTORY)){
+        if (!getTabs().isOpen(Tab.INVENTORY)){
             getTabs().open(Tab.INVENTORY);
         }
         if (getInventory().contains(sv.foodName)){
-            if (getTabs().isOpen(Tab.INVENTORY)){
+            if (!getTabs().isOpen(Tab.INVENTORY)){
                 getTabs().open(Tab.INVENTORY);
                 sleepUntil(() -> getTabs().isOpen(Tab.INVENTORY),1000);
             }
@@ -274,13 +273,17 @@ public class Main extends AbstractScript {
         }
 
         if (getLocalPlayer().isInCombat() || getLocalPlayer().isInteractedWith()){
-            if (getLocalPlayer().isAnimating() || getLocalPlayer().isInCombat()){
+
+            log("InCombat: " + getLocalPlayer().isInCombat());
+            log("Interacted: " + getLocalPlayer().isInteracting(druid));
+            if (getLocalPlayer().isAnimating() || getLocalPlayer().isInCombat() || getLocalPlayer().isInteracting(druid)){
                 antiban();
             } else {
                 log("re-engaging target");
                 druid.interact("Attack");
             }
         } else {
+            // new target
             if (druid != null && druid.getHealthPercent() > 0 && druid.exists()) {
                 log ("target selected");
                 druid.interact("Attack");
@@ -327,7 +330,7 @@ public class Main extends AbstractScript {
             gi.interact("Take");
             lootTimerStart = System.currentTimeMillis();
             sleepUntil(() -> !gi.exists(), 3000);
-            if (System.currentTimeMillis() - lootTimerStart > 5000){
+            if (System.currentTimeMillis() - lootTimerStart > 2000){
                 //taking too long to loot, probably stuck
                 getWalking().walkExact(gi.getTile());
                 getCamera().rotateToYaw(Calculations.random(370,383));
@@ -381,7 +384,10 @@ public class Main extends AbstractScript {
             log ("Near door, pick-locking that shit");
             door.interact("Pick-lock");
             sleepUntil(() -> druidArea.contains(getLocalPlayer()), 1500);
-            log ("Got in successfully");
+            if (druidArea.contains(getLocalPlayer())){
+                log ("Got in successfully");
+            }
+
             // reset the target
             druid = null;
         } else {
