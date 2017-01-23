@@ -64,6 +64,11 @@ public class Main extends AbstractScript {
         if(!getWalking().isRunEnabled() && getWalking().getRunEnergy() > Calculations.random(30,50)){
             getWalking().toggleRun();
         }
+        log("Login response: " + getClient().getLoginResponse().toString());
+        log("Expecting: " + RSLoginResponse.LOGIN_LIMIT_EXCEEDED);
+        if (getClient().getLoginResponse().equals(RSLoginResponse.LOGIN_LIMIT_EXCEEDED)){
+            hop(false);
+        }
         switch (getState()){
             case BUY:
                 buy();
@@ -78,7 +83,7 @@ public class Main extends AbstractScript {
                 walkToGE();
                 break;
             case HOP:
-                hop();
+                hop(true);
                 break;
         }
         return Calculations.random(450,700);
@@ -97,7 +102,8 @@ public class Main extends AbstractScript {
             }
 
         }
-        if (hopWorlds || getClient().getLoginResponse().equals(RSLoginResponse.LOGIN_LIMIT_EXCEEDED)){
+
+        if (hopWorlds){
             return State.HOP;
         }
         if (getInventory().contains(sv.packName) && getInventory().isFull()){
@@ -111,7 +117,6 @@ public class Main extends AbstractScript {
 
     private void buy(){
         final Shop s = getShop();
-        log("Buying packs");
         if (!s.isOpen()){
             s.open(sv.shopId);
             sleepUntil(() -> s.isOpen(), 1500);
@@ -136,7 +141,6 @@ public class Main extends AbstractScript {
 
     private void openPacks(){
         final Shop s = getShop();
-        log("Opening packs");
         if (s.isOpen()){
             s.close();
         } else {
@@ -152,24 +156,26 @@ public class Main extends AbstractScript {
     }
     private void walkToShop(){
         if (getWalking().walk(shopArea.getRandomTile())){
-            log("Walking to shop");
             sleepUntil(() -> getClient().getDestination().distance() < Calculations.random(3,6) || getLocalPlayer().isStandingStill(), Calculations.random(900,2500));
         }
 
     }
-    private void hop(){
+    private void hop(boolean quickHop){
 
         int hopTo = f2pWorlds[Calculations.random(0, f2pWorlds.length-1)];
         while (hopTo == getClient().getCurrentWorld()){
             hopTo = f2pWorlds[Calculations.random(0, f2pWorlds.length-1)];
         }
         log("Hopping worlds to " + hopTo);
-        getWorldHopper().quickHop(hopTo);
+        if (quickHop){
+            getWorldHopper().quickHop(hopTo);
+        } else {
+            getWorldHopper().hopWorld(hopTo);
+        }
+
 
         sleepUntil(() -> getClient().getInstance().getScriptManager().getCurrentScript().getRandomManager().isSolving(), 10000);
-        if (shopArea.contains(getLocalPlayer()) && getClient().getCurrentWorld() == hopTo){
-            hopWorlds = false;
-        }
+        hopWorlds = false;
 
     }
     private void walkToGE(){
