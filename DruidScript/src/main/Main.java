@@ -67,6 +67,7 @@ public class Main extends AbstractScript {
     private State getState(){
         int playersInArea = 1;
         if (System.currentTimeMillis() - lastSearchGround > 1000 && druidArea.contains(getLocalPlayer())){
+            lastSearchGround = System.currentTimeMillis();
             gi = getGroundItems().closest(itemFilter);
         }
 
