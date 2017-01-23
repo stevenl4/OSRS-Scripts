@@ -17,6 +17,7 @@ import org.dreambot.api.wrappers.interactive.GameObject;
 import org.dreambot.api.wrappers.interactive.NPC;
 import org.dreambot.api.wrappers.interactive.Player;
 import org.dreambot.api.wrappers.items.GroundItem;
+import org.dreambot.api.wrappers.items.Item;
 import util.PricedItem;
 import util.RunTimer;
 import util.ScriptVars;
@@ -66,20 +67,21 @@ public class Main extends AbstractScript {
 
     private State getState(){
         int playersInArea = 1;
-        if (System.currentTimeMillis() - lastSearchGround > 1000 && druidArea.contains(getLocalPlayer())){
-            gi = getGroundItems().closest(itemFilter);
-        }
 
-        if (System.currentTimeMillis() - lastScanPlayerCount > 2000){
+
+        if (System.currentTimeMillis() - lastScanPlayerCount > 5000){
             lastScanPlayerCount = System.currentTimeMillis();
             playersInArea = countPlayers();
         }
 
+        if (System.currentTimeMillis() - lastSearchGround > 1000 && druidArea.contains(getLocalPlayer())){
+            lastSearchGround = System.currentTimeMillis();
+            gi = getGroundItems().closest(itemFilter);
+        }
 
-        if ((getInventory().isFull() && !freeUpInventorySpace()) || getLocalPlayer().getHealthPercent() < 40){
-            if (!getTabs().isOpen(Tab.INVENTORY)){
-                getTabs().open(Tab.INVENTORY);
-            }
+
+        if ((getInventory().isFull() || getLocalPlayer().getHealthPercent() < 40)){
+
             if (BankLocation.ARDOUGNE_WEST.getArea(4).contains(getLocalPlayer())){
                 return State.BANK;
             } else {
@@ -96,9 +98,13 @@ public class Main extends AbstractScript {
                         log("Returning State.HOP");
                         return State.HOP;
                     } else {
-                        if (gi != null){
-                           return State.LOOT;
 
+                        if (sv.hop && playersInArea > 1) {
+                            log("I shouldn't be reached, but here I am");
+                        }
+                        if (gi != null) {
+
+                            return State.LOOT;
                         } else {
                             return State.FIGHT;
                         }
@@ -179,8 +185,9 @@ public class Main extends AbstractScript {
                 eat();
                 break;
         }
+
         updateLoot();
-        return Calculations.random(400,600);
+        return Calculations.random(200,300);
     }
     private void test(){
         log ("This is a test and im being reached");
@@ -189,31 +196,28 @@ public class Main extends AbstractScript {
     private boolean freeUpInventorySpace() {
 
         if (getInventory().isFull()){
-            for (int i = 0; i < 28; i ++ ){
-                if (getInventory().getItemInSlot(i).hasAction("Eat")){
-                    log("freed up an inventory space");
-                    if (!getTabs().isOpen(Tab.INVENTORY)){
-                        getTabs().open(Tab.INVENTORY);
-                        sleepUntil(() -> getTabs().isOpen(Tab.INVENTORY),1000);
-                    }
-                    getInventory().getItemInSlot(i).interact("Eat");
-                    return true;
-                }
-
-                if (getInventory().getItemInSlot(i).hasAction("Bury")){
-                    if (!getTabs().isOpen(Tab.INVENTORY)){
-                        getTabs().open(Tab.INVENTORY);
-                        sleepUntil(() -> getTabs().isOpen(Tab.INVENTORY),1000);
-                    }
-                    log("burying a bone that got picked up accidentally");
-                    getInventory().getItemInSlot(i).interact("Bury");
-                    return true;
-                }
+            if (!getTabs().isOpen(Tab.INVENTORY)){
+                getTabs().open(Tab.INVENTORY);
             }
-            return false;
+            if (getInventory().contains(sv.foodName)){
+                log("Freeing up inventory space by eating");
+                getInventory().get(sv.foodName).interact("Eat");
+                sleepUntil(() -> !getInventory().isFull(), 1500);
+                return true;
+            } else if (getInventory().contains("Bones")){
+                log("Freeing up inventory space by burying bones");
+                getInventory().get("Bones").interact("Bury");
+                sleepUntil(() -> !getInventory().isFull(), 1500);
+                return true;
+            } else {
+                return false;
+            }
+
+        } else {
+            return true;
         }
 
-        return true;
+
     }
     private void hop() {
         log("hopping worlds, too many people");
@@ -263,7 +267,7 @@ public class Main extends AbstractScript {
         // Pick a target
 
         if (selectNewTarget(druid)){
-            log("selecting new target");
+
             druid = getNpcs().closest(n -> n.getName().equals("Chaos druid") && !n.isInCombat() && n.hasAction("Attack") && !n.isInteractedWith());
         }
 
@@ -274,18 +278,14 @@ public class Main extends AbstractScript {
 
         if (getLocalPlayer().isInCombat() || getLocalPlayer().isInteractedWith()){
 
-            log("InCombat: " + getLocalPlayer().isInCombat());
-            log("Interacted: " + getLocalPlayer().isInteracting(druid));
             if (getLocalPlayer().isAnimating() || getLocalPlayer().isInCombat() || getLocalPlayer().isInteracting(druid)){
                 antiban();
             } else {
-                log("re-engaging target");
                 druid.interact("Attack");
             }
         } else {
             // new target
             if (druid != null && druid.getHealthPercent() > 0 && druid.exists()) {
-                log ("target selected");
                 druid.interact("Attack");
                 sleepUntil(druid::isInCombat, Calculations.random(400,800));
             }
@@ -298,17 +298,17 @@ public class Main extends AbstractScript {
         //  - my selected target is dead
         //  - my selected target is null
         if (target == null){
-            log ("Selecting new target because current target is null");
+//            log ("Selecting new target because current target is null");
             return true;
         }
 
         if (!target.exists()){
-            log ("Selecting new target because current target does not exist");
+//            log ("Selecting new target because current target does not exist");
             return true;
         }
 
         if (target.getHealthPercent() == 0 ){
-            log ("Selecting new target because current target has 0 hp");
+//            log ("Selecting new target because current target has 0 hp");
             return true;
         }
 //        if (target == null  || !target.exists() || target.getHealthPercent() == 0) {
@@ -318,7 +318,7 @@ public class Main extends AbstractScript {
         //  - if multi-combat, select new target as long as current selected target is not already interacting with me
         //  - if single-combat, select new target only if the current selected target is not being interacted with
         if ((!target.isInteracting(getLocalPlayer()) && target.isInCombat())) {
-            log ("Selecting new target because target is in combat but not interacting with me");
+//            log ("Selecting new target because target is in combat but not interacting with me");
             return true;
         }
 
@@ -329,31 +329,40 @@ public class Main extends AbstractScript {
             log("looting " + gi.getName());
             gi.interact("Take");
             lootTimerStart = System.currentTimeMillis();
-            sleepUntil(() -> !gi.exists(), 3000);
-            if (System.currentTimeMillis() - lootTimerStart > 2000){
+            sleepUntil(() -> !gi.exists(), 2000);
+            if (System.currentTimeMillis() - lootTimerStart > 1500){
                 //taking too long to loot, probably stuck
-                getWalking().walkExact(gi.getTile());
                 getCamera().rotateToYaw(Calculations.random(370,383));
-                getCamera().rotateToEntity(gi);
+                sleep(300);
+                getWalking().walkExact(gi.getTile());
+                log("Walking to item tile: " + gi.getTile().toString());
+                log("Player tile: " + getLocalPlayer().getTile().toString());
+                gi.interact();
+                if (gi.exists()){
+                    fight();
+                }
             }
         }
     }
 
     private void walkToBank(){
-        if (druidArea.contains(getLocalPlayer())){
-            GameObject door = getGameObjects().closest(11723);
-            if (door != null){
-                door.interact("Open");
-                sleepUntil(() -> !druidArea.contains(getLocalPlayer()), 1500);
-            }
-        } else {
-            getWalking().walk(BankLocation.ARDOUGNE_WEST.getArea(3).getRandomTile());
+        if (!freeUpInventorySpace()){
+            if (druidArea.contains(getLocalPlayer())){
+                GameObject door = getGameObjects().closest(11723);
+                if (door != null){
+                    door.interact("Open");
+                    sleepUntil(() -> !druidArea.contains(getLocalPlayer()), 1500);
+                }
+            } else {
+                getWalking().walk(BankLocation.ARDOUGNE_WEST.getArea(3).getRandomTile());
 
+            }
         }
+
     }
 
     private void walkToTraining(){
-
+        log("Not in druid area");
         if (getBank().isOpen()){
             getBank().close();
             sleepUntil(() -> !getBank().isOpen(), 1500);
@@ -379,22 +388,26 @@ public class Main extends AbstractScript {
                 log("Went downstairs successfully");
             }
         }
+
         GameObject door = getGameObjects().closest(11723);
-        if (getLocalPlayer().distance(door) < Calculations.random(4,6) && door != null){
-            log ("Near door, pick-locking that shit");
-            door.interact("Pick-lock");
-            sleepUntil(() -> druidArea.contains(getLocalPlayer()), 1500);
-            if (druidArea.contains(getLocalPlayer())){
-                log ("Got in successfully");
+
+        if (!druidArea.contains(getLocalPlayer())){
+            if (getLocalPlayer().distance(door) < Calculations.random(4,6) && door != null ){
+                log ("Near door, pick-locking that shit");
+                door.interact("Pick-lock");
+                sleepUntil(() -> druidArea.contains(getLocalPlayer()), 1500);
+                if (druidArea.contains(getLocalPlayer())){
+                    log ("Got in successfully");
+                }
+
+
+            } else {
+                getWalking().walk(druidEntranceArea.getRandomTile());
+
             }
-
-            // reset the target
-            druid = null;
-        } else {
-
-            getWalking().walk(druidEntranceArea.getRandomTile());
-
         }
+        // reset the target
+        druid = null;
     }
 
     private void bank(){
@@ -436,7 +449,7 @@ public class Main extends AbstractScript {
                 } else {
                     getSkills().hoverSkill(Skill.HITPOINTS);
                 }
-                sleepUntil(()-> !getLocalPlayer().isInCombat() || !getLocalPlayer().isAnimating(),Calculations.random(300, 500));
+                sleepUntil(()-> !getLocalPlayer().isInCombat() || !getLocalPlayer().isInteractedWith(),Calculations.random(300, 500));
             }
         } else if (random <= 30) {
             if (!getTabs().isOpen(Tab.INVENTORY)){
@@ -445,7 +458,7 @@ public class Main extends AbstractScript {
         } else {
             if (getMouse().isMouseInScreen()){
                 if (getMouse().moveMouseOutsideScreen()){
-                    sleepUntil(()-> !getLocalPlayer().isInCombat() || !getLocalPlayer().isAnimating(),Calculations.random(500, 3300));
+                    sleepUntil(()-> !getLocalPlayer().isInCombat() || !getLocalPlayer().isInteractedWith(),Calculations.random(500, 3300));
                 }
             }
         }
