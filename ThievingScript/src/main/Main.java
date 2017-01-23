@@ -87,7 +87,7 @@ public class Main extends AbstractScript {
 
 
         // Got attacked, kill the guard
-        if (getLocalPlayer().isInCombat() && getLocalPlayer().isInteractedWith()){
+        if (getLocalPlayer().isInCombat() || getLocalPlayer().isInteractedWith()){
             if (!getCombat().isAutoRetaliateOn()) {
                 getCombat().toggleAutoRetaliate(true);
             }
