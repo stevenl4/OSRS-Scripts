@@ -230,6 +230,7 @@ public class Main extends AbstractScript {
             getBank().withdraw("Tuna", 10);
             sleepUntil(() -> getInventory().contains("Tuna"),1500);
             getBank().close();
+            masterFarmer = null;
         } else {
             getBank().open(BankLocation.DRAYNOR);
             sleepUntil(() -> getBank().isOpen(), 1500);
