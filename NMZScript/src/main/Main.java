@@ -35,12 +35,13 @@ public class Main extends AbstractScript {
 
     private boolean started;
     private long lastOverloadDose;
+    private long lastAbsorptionDose;
     private long lastPowerUpCheck;
     private long lastPowerSurge;
     private boolean outOfPrayerPots = false;
     private boolean outOfOverloadPots = false;
     private boolean useSpec = false;
-    private int lowPrayerThreshold = 20;
+    private int lowPrayerThreshold = 10;
     private Area startArea = new Area (2601,3118,2612,3112,0);
     private Area dreamArea = new Area (0,100000,100000,0,3);
     private Area practiceArea = new Area (0, 100000, 100000, 0, 1);
@@ -105,7 +106,12 @@ public class Main extends AbstractScript {
             mainShield = null;
         }
 
-        specWeapon = getInventory().getItemInSlot(0);
+        if (getEquipment().getItemInSlot(0).hasAction("Wield")){
+            specWeapon = getInventory().getItemInSlot(0);
+        } else {
+            specWeapon = null;
+        }
+
         log("Main weapon: " + mainWeapon.getName());
         log("Main shield: " + mainShield.getName());
         log("Spec weapon: " + specWeapon.getName());
@@ -157,20 +163,54 @@ public class Main extends AbstractScript {
         if (getWalking().walk(startArea.getRandomTile())){
             log("walking to starting area area");
             sleepUntil(() -> getClient().getDestination().distance(getLocalPlayer()) < Calculations.random(3,5) || getLocalPlayer().isStandingStill(), Calculations.random(900,2500));
-        }
+    }
     }
     private void fight(){
         long timeSinceLastOverloadDose = System.currentTimeMillis() - lastOverloadDose;
         long timeSinceLastPowerUpCheck = System.currentTimeMillis() - lastPowerUpCheck;
         long timeSinceLastPowerSurge = System.currentTimeMillis() - lastPowerSurge;
+        long timeSinceLastAbsorptionDose = System.currentTimeMillis() - lastAbsorptionDose;
+
         // Check Prayer
-        if (!getPrayer().isActive(Prayer.PROTECT_FROM_MELEE)){
-            log("turning on protect from melee");
-            getPrayer().toggle(true, Prayer.PROTECT_FROM_MELEE);
+        if (sv.prayerMethod){
+            if (!getPrayer().isActive(Prayer.PROTECT_FROM_MELEE)) {
+                getPrayer().toggle(true, Prayer.PROTECT_FROM_MELEE);
+            }
         }
 
-        if (!useSpec && (getSkills().getBoostedLevels(Skill.PRAYER) >= lowPrayerThreshold || outOfPrayerPots) && (timeSinceLastOverloadDose < 298000 || outOfOverloadPots)){
-            antiban();
+        if (sv.absorptionMethod){
+            // Chug a whole absorption potion at the start
+            if (lastAbsorptionDose == 0){
+                Item item = getInventory().get(i -> i.getName().equals("Absorption (4)") && i.hasAction("Drink"));
+                while(item.hasAction("Drink")){
+                    item.interact("Drink");
+                    sleep(200,300);
+                }
+
+                lastAbsorptionDose = System.currentTimeMillis();
+            }
+            // Check prayer
+            if (!getPrayer().isActive(Prayer.PROTECT_FROM_MELEE) && getSkills().getBoostedLevels(Skill.HITPOINTS) > sv.maxHp){
+                getPrayer().toggle(true, Prayer.PROTECT_FROM_MELEE);
+            } else {
+                getPrayer().toggle(false, Prayer.PROTECT_FROM_MELEE);
+            }
+
+            // Guzzle cake only when between 1 and 51 hp
+            if (getSkills().getBoostedLevels(Skill.HITPOINTS) > sv.maxHp && getSkills().getBoostedLevels(Skill.HITPOINTS) < 51){
+                getInventory().interact("Dwarven rock cake", "Guzzle");
+            }
+        }
+
+
+        if (!useSpec && (timeSinceLastOverloadDose < 298000 || outOfOverloadPots)){
+            if (sv.prayerMethod && (getSkills().getBoostedLevels(Skill.PRAYER) >= lowPrayerThreshold || outOfPrayerPots)){
+                antiban();
+            }
+
+            if (sv.absorptionMethod && getSkills().getBoostedLevels(Skill.HITPOINTS) <= sv.maxHp){
+                antiban();
+            }
         }
 
         // Check prayer potion and set a level to use the next dose
@@ -188,7 +228,7 @@ public class Main extends AbstractScript {
             }
         }
         // Drink Overload Potion
-        if (timeSinceLastOverloadDose >= 300000 && getSkills().getBoostedLevels(Skill.HITPOINTS) > 60 && !outOfOverloadPots) {
+        if (timeSinceLastOverloadDose >= 300000 && getSkills().getBoostedLevels(Skill.HITPOINTS) > 51 && !outOfOverloadPots) {
             outOfOverloadPots = true;
             for (int i = 1; i < 5; i ++){
                 String potionName = "Overload (" + i + ")";
@@ -197,6 +237,19 @@ public class Main extends AbstractScript {
                         lastOverloadDose = System.currentTimeMillis();
                         sleepUntil(() -> getSkills().getBoostedLevels(Skill.STRENGTH) > getSkills().getRealLevel(Skill.STRENGTH), 800);
                         outOfOverloadPots = false;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Drink Absorption Potion
+        if (timeSinceLastAbsorptionDose >= 30000 && sv.absorptionMethod){
+            for (int i = 1; i < 5; i++){
+                String potionName = "Absorption (" + i + ")";
+                if (getInventory().contains(potionName)) {
+                    if (getInventory().interact(potionName, "Drink")){
+                        lastAbsorptionDose = System.currentTimeMillis();
                         break;
                     }
                 }
@@ -234,7 +287,7 @@ public class Main extends AbstractScript {
             lastPowerUpCheck = System.currentTimeMillis();
         }
         // Start speccing
-        if (getCombat().getSpecialPercentage() >= 100 || !(getCombat().getSpecialPercentage() < 40) || timeSinceLastPowerSurge <= 46000 ) {
+        if (getCombat().getSpecialPercentage() == 100 || !(getCombat().getSpecialPercentage() <= sv.specMinPercent) || timeSinceLastPowerSurge <= 46000 ) {
             useSpec = true;
         } else {
             useSpec = false;
@@ -242,9 +295,11 @@ public class Main extends AbstractScript {
 
         if (useSpec) {
             // Verify spec weapon is equipped
-            if (!getEquipment().getItemInSlot(EquipmentSlot.WEAPON.getSlot()).getName().equals(specWeapon.getName())){
-                getInventory().interact(specWeapon.getName(), "Wield");
-                sleepUntil(() -> getEquipment().getItemInSlot(EquipmentSlot.WEAPON.getSlot()).getName().equals(specWeapon.getName()), 600);
+            if (specWeapon != null){
+                if (!getEquipment().getItemInSlot(EquipmentSlot.WEAPON.getSlot()).getName().equals(specWeapon.getName())){
+                    getInventory().interact(specWeapon.getName(), "Wield");
+                    sleepUntil(() -> getEquipment().getItemInSlot(EquipmentSlot.WEAPON.getSlot()).getName().equals(specWeapon.getName()), 600);
+                }
             }
 
             if (!getCombat().isSpecialActive()){
@@ -273,8 +328,24 @@ public class Main extends AbstractScript {
         if (dreamArea.contains(getLocalPlayer())){
             return true;
         } else {
-            if (getInventory().contains("Prayer potion(4)") && getInventory().contains("Overload (4)")){
-                return true;
+            // Check overload
+            if (getInventory().contains("Overload (4)")){
+                if (sv.prayerMethod) {
+                    if (getInventory().contains("Prayer potion(4)")){
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else if (sv.absorptionMethod){
+                    // TODO check name
+                    if (getInventory().contains("Absorption (4)") && getInventory().contains("Dwarven rock cake")){
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
             } else {
                 return false;
             }
