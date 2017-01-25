@@ -72,14 +72,15 @@ public class Main extends AbstractScript {
     private void cast(){
         int action = Calculations.random(1,100);
         if (castCount >= nextExpCheck){
-            if (!getTabs().isOpen(Tab.STATS)){
+            if (!getTabs().isOpen(Tab.STATS)) {
                 getTabs().open(Tab.STATS);
                 sleepUntil(() -> getTabs().isOpen(Tab.STATS), 1000);
-            } else {
-                getSkills().hoverSkill(Skill.MAGIC);
-                sleep(Calculations.random(400, 600));
-                nextExpCheck = nextExpCheck + Calculations.random(400, 1000);
             }
+
+            getSkills().hoverSkill(Skill.MAGIC);
+            sleep(Calculations.random(400, 600));
+            nextExpCheck = nextExpCheck + Calculations.random(400, 1000);
+
         }
 
         if (getInventory().contains("Water rune") && getInventory().contains("Body rune")){
