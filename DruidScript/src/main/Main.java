@@ -201,12 +201,12 @@ public class Main extends AbstractScript {
             }
             if (getInventory().contains(sv.foodName)){
                 log("Freeing up inventory space by eating");
-                getInventory().get(sv.foodName).interact("Eat");
+                getInventory().interact(sv.foodName, "Eat");
                 sleepUntil(() -> !getInventory().isFull(), 1500);
                 return true;
             } else if (getInventory().contains("Bones")){
                 log("Freeing up inventory space by burying bones");
-                getInventory().get("Bones").interact("Bury");
+                getInventory().interact("Bones", "Bury");
                 sleepUntil(() -> !getInventory().isFull(), 1500);
                 return true;
             } else {
