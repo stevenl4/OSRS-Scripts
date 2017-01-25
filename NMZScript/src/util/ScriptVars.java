@@ -8,5 +8,8 @@ public class ScriptVars {
     public int maxHp;
     public boolean prayerMethod;
     public boolean absorptionMethod;
+    public boolean exitWhenOutOfOverload;
+    public boolean useSpecialOnlyOnPowerUp;
     public boolean started = false;
+    public boolean testMode = false;
 }

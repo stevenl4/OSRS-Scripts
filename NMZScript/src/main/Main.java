@@ -1,6 +1,7 @@
 package main;
 
 
+import gui.Gui;
 import org.dreambot.api.methods.Calculations;
 import org.dreambot.api.methods.container.impl.equipment.EquipmentSlot;
 import org.dreambot.api.methods.map.Tile;
@@ -33,15 +34,18 @@ import java.util.List;
 @ScriptManifest(category = Category.MINIGAME, name = "NMZ", author = "GB", version = 1.0, description = "Does NMZ")
 public class Main extends AbstractScript {
 
-    private boolean started;
+
     private long lastOverloadDose;
-    private long lastAbsorptionDose;
+    private long lastRapidHeal;
     private long lastPowerUpCheck;
     private long lastPowerSurge;
+    private long nextRapidHealFlick;
+    private long dreamStartTimer;
     private boolean outOfPrayerPots = false;
     private boolean outOfOverloadPots = false;
     private boolean useSpec = false;
     private int lowPrayerThreshold = 10;
+    private int lowAbsorptionThreshold = 100;
     private Area startArea = new Area (2601,3118,2612,3112,0);
     private Area dreamArea = new Area (0,100000,100000,0,3);
     private Area practiceArea = new Area (0, 100000, 100000, 0, 1);
@@ -51,9 +55,7 @@ public class Main extends AbstractScript {
     private Item specWeapon;
     private RunTimer timer;
     private ScriptVars sv = new ScriptVars();
-    // TEST MODE
-    private boolean testMode = false;
-    // End TEST MODE
+
     private enum State {
         WALK_TO_START, GET_REQUIRED_ITEMS, START_DREAM, FIGHT, TEST
     }
@@ -64,7 +66,7 @@ public class Main extends AbstractScript {
 //        start the dream
 //        set a random standing tile
 //        when activating a spark, set that as new tile
-        if (testMode){
+        if (sv.testMode){
             return State.TEST;
         } else {
             // Verify there is overload potion and prayer potion and overload potion
@@ -93,6 +95,13 @@ public class Main extends AbstractScript {
 
     @Override
     public void onStart() {
+
+        Gui gui = new Gui(sv);
+        gui.setVisible(true);
+        while (!sv.started){
+            sleep(1000);
+        }
+
         if (!getCombat().isAutoRetaliateOn()) {
             log("turning on autoretaliate");
             getCombat().toggleAutoRetaliate(true);
@@ -100,21 +109,21 @@ public class Main extends AbstractScript {
         lastOverloadDose = 0;
         lastPowerUpCheck = 0;
         mainWeapon = getEquipment().getItemInSlot(EquipmentSlot.WEAPON.getSlot());
+        log("Main weapon: " + mainWeapon.getName());
         if (getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot()) != null){
             mainShield = getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot());
+            log("Main shield: " + mainShield.getName());
         } else {
             mainShield = null;
         }
 
-        if (getEquipment().getItemInSlot(0).hasAction("Wield")){
+        if (getInventory().getItemInSlot(0).hasAction("Wield")){
             specWeapon = getInventory().getItemInSlot(0);
+            log("Spec weapon: " + specWeapon.getName());
         } else {
             specWeapon = null;
         }
 
-        log("Main weapon: " + mainWeapon.getName());
-        log("Main shield: " + mainShield.getName());
-        log("Spec weapon: " + specWeapon.getName());
         getSkillTracker().start(Skill.DEFENCE);
         getSkillTracker().start(Skill.ATTACK);
         getSkillTracker().start(Skill.STRENGTH);
@@ -122,13 +131,28 @@ public class Main extends AbstractScript {
         getSkillTracker().start(Skill.RANGED);
         timer = new RunTimer();
 
-        started = true;
+
+
     }
 
     @Override
     public int onLoop() {
         if(getLocalPlayer().isMoving() && getClient().getDestination() != null && getLocalPlayer().distance(getClient().getDestination()) > Calculations.random(2,3)){
             return Calculations.random(200,300);
+        }
+
+        if (!dreamArea.contains(getLocalPlayer())){
+            if (getPrayer().isActive(Prayer.PROTECT_FROM_MELEE)){
+                getPrayer().toggle(false, Prayer.PROTECT_FROM_MELEE);
+            }
+
+            if (getPrayer().isActive(Prayer.RAPID_HEAL)){
+                getPrayer().toggle(false,Prayer.RAPID_HEAL);
+            }
+        }
+
+        if (getCamera().getYaw() < 300){
+            getCamera().rotateToYaw(Calculations.random(301,383));
         }
         switch (getState()){
             case GET_REQUIRED_ITEMS:
@@ -153,10 +177,16 @@ public class Main extends AbstractScript {
     }
 
     private void test(){
-        log("X: " + getLocalPlayer().getX());
-        log("X grid: " + getLocalPlayer().getGridX());
-        log("X local: " + getLocalPlayer().getLocalX());
-        stop();
+        long absoprtionPointsLeft;
+
+        if (getWidgets().getWidget(202).getChild(1).getChild(9).getText() != ""){
+            log("Text:" +getWidgets().getWidget(202).getChild(1).getChild(9).getText()+ "[end]");
+            absoprtionPointsLeft = Integer.parseInt(getWidgets().getWidget(202).getChild(1).getChild(9).getText());
+        } else {
+            absoprtionPointsLeft = 0;
+        }
+
+        log("AbsorptionPointsLeft: " + absoprtionPointsLeft);
 
     }
     private void move(){
@@ -169,42 +199,77 @@ public class Main extends AbstractScript {
         long timeSinceLastOverloadDose = System.currentTimeMillis() - lastOverloadDose;
         long timeSinceLastPowerUpCheck = System.currentTimeMillis() - lastPowerUpCheck;
         long timeSinceLastPowerSurge = System.currentTimeMillis() - lastPowerSurge;
-        long timeSinceLastAbsorptionDose = System.currentTimeMillis() - lastAbsorptionDose;
+        long timeSinceLastRapidHeal = System.currentTimeMillis() - lastRapidHeal;
+        long absorptionPointsLeft;
 
         // Check Prayer
         if (sv.prayerMethod){
-            if (!getPrayer().isActive(Prayer.PROTECT_FROM_MELEE)) {
+            if (!getPrayer().isActive(Prayer.PROTECT_FROM_MELEE) && System.currentTimeMillis() - dreamStartTimer > 25000) {
                 getPrayer().toggle(true, Prayer.PROTECT_FROM_MELEE);
             }
         }
 
         if (sv.absorptionMethod){
-            // Chug a whole absorption potion at the start
-            if (lastAbsorptionDose == 0){
-                Item item = getInventory().get(i -> i.getName().equals("Absorption (4)") && i.hasAction("Drink"));
-                while(item.hasAction("Drink")){
-                    item.interact("Drink");
-                    sleep(200,300);
+            if (getPrayer().isActive(Prayer.RAPID_HEAL)){
+                getPrayer().toggle(false, Prayer.RAPID_HEAL);
+                sleepUntil(() -> !getPrayer().isActive(Prayer.RAPID_HEAL), 300);
+            }
+
+            if (getWidgets().getWidget(202).getChild(1).getChild(9).getText() != ""){
+                absorptionPointsLeft = Integer.parseInt(getWidgets().getWidget(202).getChild(1).getChild(9).getText());
+            } else {
+                absorptionPointsLeft = 0;
+            }
+            // Check prayer, make sure prayer can be turned on
+            if ((!getPrayer().isActive(Prayer.PROTECT_FROM_MELEE) && (getSkills().getBoostedLevels(Skill.HITPOINTS) > sv.maxHp + 1) || absorptionPointsLeft < 20)){
+                if (System.currentTimeMillis() - dreamStartTimer > 25000){
+                    if (getSkills().getBoostedLevels(Skill.PRAYER) > 0 ){
+                        log("Turning on Prayer because hp > " + sv.maxHp);
+                        getPrayer().toggle(true, Prayer.PROTECT_FROM_MELEE);
+                        sleepUntil(() -> getPrayer().isActive(Prayer.PROTECT_FROM_MELEE), 400);
+                    }
                 }
 
-                lastAbsorptionDose = System.currentTimeMillis();
             }
-            // Check prayer
-            if (!getPrayer().isActive(Prayer.PROTECT_FROM_MELEE) && getSkills().getBoostedLevels(Skill.HITPOINTS) > sv.maxHp){
-                getPrayer().toggle(true, Prayer.PROTECT_FROM_MELEE);
-            } else {
+
+            if (getPrayer().isActive(Prayer.PROTECT_FROM_MELEE) && getSkills().getBoostedLevels(Skill.HITPOINTS) <= sv.maxHp){
                 getPrayer().toggle(false, Prayer.PROTECT_FROM_MELEE);
             }
 
             // Guzzle cake only when between 1 and 51 hp
-            if (getSkills().getBoostedLevels(Skill.HITPOINTS) > sv.maxHp && getSkills().getBoostedLevels(Skill.HITPOINTS) < 51){
-                getInventory().interact("Dwarven rock cake", "Guzzle");
+            if ((getSkills().getBoostedLevels(Skill.HITPOINTS) > sv.maxHp && getSkills().getBoostedLevels(Skill.HITPOINTS) < 51) || outOfOverloadPots){
+                if ((timeSinceLastOverloadDose > 8000 && timeSinceLastOverloadDose < 299000) || outOfOverloadPots) {
+                    getInventory().interact("Dwarven rock cake", "Guzzle");
+                }
             }
+
+            // Drink Absorption Potion
+            if (sv.exitWhenOutOfOverload && !outOfOverloadPots){
+                if (absorptionPointsLeft < lowAbsorptionThreshold){
+                    for (int i = 1; i < 5; i++){
+                        String potionName = "Absorption (" + i + ")";
+                        if (getInventory().contains(potionName)) {
+                            if (getInventory().interact(potionName, "Drink")){
+                                lowAbsorptionThreshold = Calculations.random(65, 135);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (timeSinceLastRapidHeal > nextRapidHealFlick) {
+
+                getPrayer().flick(Prayer.RAPID_HEAL, Calculations.random(250,350));
+                nextRapidHealFlick = Calculations.random(40000,50000);
+                lastRapidHeal = System.currentTimeMillis();
+            }
+
         }
 
-
+        // Check when to use antiban
         if (!useSpec && (timeSinceLastOverloadDose < 298000 || outOfOverloadPots)){
-            if (sv.prayerMethod && (getSkills().getBoostedLevels(Skill.PRAYER) >= lowPrayerThreshold || outOfPrayerPots)){
+            if ((sv.prayerMethod && (getSkills().getBoostedLevels(Skill.PRAYER) >= lowPrayerThreshold) || outOfPrayerPots)){
                 antiban();
             }
 
@@ -228,12 +293,13 @@ public class Main extends AbstractScript {
             }
         }
         // Drink Overload Potion
-        if (timeSinceLastOverloadDose >= 300000 && getSkills().getBoostedLevels(Skill.HITPOINTS) > 51 && !outOfOverloadPots) {
+        if (timeSinceLastOverloadDose >= 300000 && getSkills().getBoostedLevels(Skill.HITPOINTS) >= 51 && !outOfOverloadPots) {
             outOfOverloadPots = true;
             for (int i = 1; i < 5; i ++){
                 String potionName = "Overload (" + i + ")";
                 if (getInventory().contains(potionName)) {
                     if (getInventory().interact(potionName, "Drink")){
+                        log("Drinking overload");
                         lastOverloadDose = System.currentTimeMillis();
                         sleepUntil(() -> getSkills().getBoostedLevels(Skill.STRENGTH) > getSkills().getRealLevel(Skill.STRENGTH), 800);
                         outOfOverloadPots = false;
@@ -243,18 +309,6 @@ public class Main extends AbstractScript {
             }
         }
 
-        // Drink Absorption Potion
-        if (timeSinceLastAbsorptionDose >= 30000 && sv.absorptionMethod){
-            for (int i = 1; i < 5; i++){
-                String potionName = "Absorption (" + i + ")";
-                if (getInventory().contains(potionName)) {
-                    if (getInventory().interact(potionName, "Drink")){
-                        lastAbsorptionDose = System.currentTimeMillis();
-                        break;
-                    }
-                }
-            }
-        }
 
         // Check for special spawns
         if (timeSinceLastPowerUpCheck >= 2000) {
@@ -267,8 +321,9 @@ public class Main extends AbstractScript {
                 sleepUntil(() -> getLocalPlayer().distance(getClient().getDestination()) < 2, 5000);
                 goZapper.interact();
                 sleep(700);
-                sleepUntil(() -> getLocalPlayer().isStandingStill(), 5000);
+                sleepUntil(() -> !goZapper.exists(), 5000);
                 log("Zapper activate");
+                getCamera().rotateToYaw(Calculations.random(350,383));
             }
 
             // Check Power surge
@@ -279,19 +334,30 @@ public class Main extends AbstractScript {
                 sleepUntil(() -> getLocalPlayer().distance(getClient().getDestination()) < 2, 5000);
                 goPowerSurge.interact();
                 sleep(700);
-                sleepUntil(() -> getLocalPlayer().isStandingStill(), 5000);
+                sleepUntil(() -> !goPowerSurge.exists(), 5000);
                 log("Power surge activated");
+                getCamera().rotateToYaw(Calculations.random(350,383));
                 lastPowerSurge = System.currentTimeMillis();
 
             }
             lastPowerUpCheck = System.currentTimeMillis();
         }
         // Start speccing
-        if (getCombat().getSpecialPercentage() == 100 || !(getCombat().getSpecialPercentage() <= sv.specMinPercent) || timeSinceLastPowerSurge <= 46000 ) {
-            useSpec = true;
+        if (sv.useSpecialOnlyOnPowerUp){
+            if (timeSinceLastPowerSurge <= 46000 ) {
+                useSpec = true;
+            } else {
+                useSpec = false;
+            }
         } else {
-            useSpec = false;
+            if (getCombat().getSpecialPercentage() == 100 || !(getCombat().getSpecialPercentage() < sv.specMinPercent) || timeSinceLastPowerSurge <= 46000 ) {
+                useSpec = true;
+            } else {
+                useSpec = false;
+            }
         }
+
+
 
         if (useSpec) {
             // Verify spec weapon is equipped
@@ -317,14 +383,18 @@ public class Main extends AbstractScript {
                 sleepUntil(() -> getEquipment().getItemInSlot(EquipmentSlot.WEAPON.getSlot()).getName().equals(mainWeapon.getName()), 600);
             }
 
-            if (getInventory().contains(mainShield.getName()) && mainShield != null) {
-                getInventory().interact(mainShield.getName(), "Wield");
-                sleepUntil(() -> getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot()).getName().equals(mainWeapon.getName()), 600);
+            if (mainShield != null){
+                if (getInventory().contains(mainShield.getName())) {
+                    getInventory().interact(mainShield.getName(), "Wield");
+                    sleepUntil(() -> getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot()).getName().equals(mainWeapon.getName()), 600);
+                }
             }
+
         }
 
     }
     private boolean verifyEquipment() {
+        // TODO select potions in GUI
         if (dreamArea.contains(getLocalPlayer())){
             return true;
         } else {
@@ -337,7 +407,6 @@ public class Main extends AbstractScript {
                         return false;
                     }
                 } else if (sv.absorptionMethod){
-                    // TODO check name
                     if (getInventory().contains("Absorption (4)") && getInventory().contains("Dwarven rock cake")){
                         return true;
                     } else {
@@ -358,10 +427,11 @@ public class Main extends AbstractScript {
         stop();
     }
     private void startDream() {
+        dreamStartTimer = 0;
         NPC dominicOnion = getNpcs().closest("Dominic Onion");
         if (dominicOnion != null) {
             dominicOnion.interact("Dream");
-            sleepUntil(() -> getLocalPlayer().isInteractedWith(),3000);
+            sleepUntil(() -> getLocalPlayer().isInteractedWith(),10000);
 
             if (getDialogues().getOptionIndex("Practice") > 0){
                 getDialogues().clickOption("Rumble");
@@ -396,17 +466,14 @@ public class Main extends AbstractScript {
         }
         startTile = getLocalPlayer().getTile();
         log("player starting X: " + startTile.getX() + " | Y: " + startTile.getY());
-        getPrayer().toggle(true, Prayer.PROTECT_FROM_MELEE);
-        sleep(500);
-        getPrayer().toggle(false, Prayer.PROTECT_FROM_MELEE);
+
         // Walk north
         int currentX = startTile.getX();
         int currentY = startTile.getY();
         Tile newStandingPosition = new Tile(currentX, currentY + Calculations.random(10,20), 3);
         getWalking().walk(newStandingPosition);
-        sleepUntil(() -> getLocalPlayer().getTile().distance(startTile) > 0 , 10000);
-        // Chill for a few seconds before turning on prayer
-        sleep(Calculations.random(5000,10000));
+        sleepUntil(() -> getLocalPlayer().getTile().distance(startTile) > 0 , 3000);
+        dreamStartTimer = System.currentTimeMillis();
     }
 
     private void antiban() {
@@ -448,13 +515,19 @@ public class Main extends AbstractScript {
 
     @Override
     public void onPaint(Graphics g) {
-        if (started){
+        if (sv.started){
             g.drawString("State: " + getState().toString(), 5, 15);
             g.drawString("Runtime: " + timer.format(),5,30);
             g.drawString("Attack exp (p/h): " + getSkillTracker().getGainedExperience(Skill.ATTACK) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.ATTACK)) + ")",5,45);
             g.drawString("Strength exp (p/h): " + getSkillTracker().getGainedExperience(Skill.STRENGTH) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.STRENGTH)) + ")", 5,60);
             g.drawString("Def exp (p/h): " + getSkillTracker().getGainedExperience(Skill.DEFENCE) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.DEFENCE)) + ")", 5, 75);
             g.drawString("HP exp (p/h): " + getSkillTracker().getGainedExperience(Skill.HITPOINTS) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.HITPOINTS)) + ")", 5,90);
+            g.drawString("Ranged exp (p/h): " + getSkillTracker().getGainedExperience(Skill.RANGED) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.RANGED)) + ")", 5, 105);
+
+            g.drawString("Next prayer drink: " + lowPrayerThreshold, 5, 220);
+            g.drawString("Next absorption drink: " + lowAbsorptionThreshold, 5, 255);
+            g.drawString("Time since last flick: " + nextRapidHealFlick, 5, 270);
+
         }
 
     }
