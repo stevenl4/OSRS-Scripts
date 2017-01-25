@@ -31,7 +31,7 @@ import java.util.List;
  * Created by steven.luo on 16/01/2017.
  */
 
-@ScriptManifest(category = Category.MINIGAME, name = "NMZ", author = "GB", version = 1.0, description = "Does NMZ")
+@ScriptManifest(category = Category.MINIGAME, name = "NMZ Fighter", author = "GB", version = 1.1, description = "have Spec weapon in inventory slot 1, have potions ready")
 public class Main extends AbstractScript {
 
 
@@ -41,6 +41,12 @@ public class Main extends AbstractScript {
     private long lastPowerSurge;
     private long nextRapidHealFlick;
     private long dreamStartTimer;
+
+    private long timeSinceLastOverloadDose;
+    private long timeSinceLastPowerUpCheck;
+    private long timeSinceLastPowerSurge;
+    private long timeSinceLastRapidHeal;
+    private long absorptionPointsLeft;
     private boolean outOfPrayerPots = false;
     private boolean outOfOverloadPots = false;
     private boolean useSpec = false;
@@ -152,7 +158,7 @@ public class Main extends AbstractScript {
         }
 
         if (getCamera().getYaw() < 300){
-            getCamera().rotateToYaw(Calculations.random(301,383));
+            getCamera().rotateToPitch(Calculations.random(301,383));
         }
         switch (getState()){
             case GET_REQUIRED_ITEMS:
@@ -196,11 +202,11 @@ public class Main extends AbstractScript {
     }
     }
     private void fight(){
-        long timeSinceLastOverloadDose = System.currentTimeMillis() - lastOverloadDose;
-        long timeSinceLastPowerUpCheck = System.currentTimeMillis() - lastPowerUpCheck;
-        long timeSinceLastPowerSurge = System.currentTimeMillis() - lastPowerSurge;
-        long timeSinceLastRapidHeal = System.currentTimeMillis() - lastRapidHeal;
-        long absorptionPointsLeft;
+        timeSinceLastOverloadDose = System.currentTimeMillis() - lastOverloadDose;
+        timeSinceLastPowerUpCheck = System.currentTimeMillis() - lastPowerUpCheck;
+        timeSinceLastPowerSurge = System.currentTimeMillis() - lastPowerSurge;
+        timeSinceLastRapidHeal = System.currentTimeMillis() - lastRapidHeal;
+
 
         // Check Prayer
         if (sv.prayerMethod){
@@ -238,7 +244,7 @@ public class Main extends AbstractScript {
 
             // Guzzle cake only when between 1 and 51 hp
             if ((getSkills().getBoostedLevels(Skill.HITPOINTS) > sv.maxHp && getSkills().getBoostedLevels(Skill.HITPOINTS) < 51) || outOfOverloadPots){
-                if ((timeSinceLastOverloadDose > 8000 && timeSinceLastOverloadDose < 299000) || outOfOverloadPots) {
+                if ((timeSinceLastOverloadDose > 8000 && timeSinceLastOverloadDose < 299000) || (outOfOverloadPots && getSkills().getBoostedLevels(Skill.HITPOINTS) > sv.maxHp)) {
                     getInventory().interact("Dwarven rock cake", "Guzzle");
                 }
             }
@@ -323,7 +329,7 @@ public class Main extends AbstractScript {
                 sleep(700);
                 sleepUntil(() -> !goZapper.exists(), 5000);
                 log("Zapper activate");
-                getCamera().rotateToYaw(Calculations.random(350,383));
+                getCamera().rotateToPitch(Calculations.random(350,383));
             }
 
             // Check Power surge
@@ -336,7 +342,7 @@ public class Main extends AbstractScript {
                 sleep(700);
                 sleepUntil(() -> !goPowerSurge.exists(), 5000);
                 log("Power surge activated");
-                getCamera().rotateToYaw(Calculations.random(350,383));
+                getCamera().rotateToPitch(Calculations.random(350,383));
                 lastPowerSurge = System.currentTimeMillis();
 
             }
@@ -527,6 +533,7 @@ public class Main extends AbstractScript {
             g.drawString("Next prayer drink: " + lowPrayerThreshold, 5, 220);
             g.drawString("Next absorption drink: " + lowAbsorptionThreshold, 5, 255);
             g.drawString("Time since last flick: " + nextRapidHealFlick, 5, 270);
+            g.drawString("Overload time left: " + timeSinceLastOverloadDose, 5, 295);
 
         }
 
