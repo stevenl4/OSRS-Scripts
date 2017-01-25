@@ -1,5 +1,7 @@
 package main;
 import org.dreambot.api.methods.Calculations;
+import org.dreambot.api.methods.container.impl.equipment.Equipment;
+import org.dreambot.api.methods.container.impl.equipment.EquipmentSlot;
 import org.dreambot.api.methods.magic.Normal;
 import org.dreambot.api.methods.skills.Skill;
 import org.dreambot.api.methods.tabs.Tab;
@@ -7,6 +9,7 @@ import org.dreambot.api.script.AbstractScript;
 import org.dreambot.api.script.Category;
 import org.dreambot.api.script.ScriptManifest;
 import org.dreambot.api.wrappers.interactive.NPC;
+import org.dreambot.api.wrappers.items.Item;
 import util.RunTimer;
 import util.ScriptVars;
 
@@ -21,6 +24,9 @@ public class Main extends AbstractScript {
     ScriptVars sv = new ScriptVars();
     private long castCount;
     private long nextExpCheck;
+    private long antibanValue;
+    private boolean canCurse;
+    private boolean canAlch;
     NPC target;
     private RunTimer timer;
 
@@ -31,8 +37,18 @@ public class Main extends AbstractScript {
     @Override
     public void onStart() {
         timer = new RunTimer();
+        // Start Tracking All Skills
+        for (Skill s : Skill.values()){
+            getSkillTracker().start(s);
+        }
         getSkillTracker().start(Skill.MAGIC);
         nextExpCheck = Calculations.random(300,500);
+        sv.highAlch = false;
+        sv.curse = true;
+        sv.alchItems = new String[] {};
+        if (sv.alchItems.length == 0){
+            sv.highAlch = false;
+        }
         sv.started = true;
     }
 
@@ -80,49 +96,166 @@ public class Main extends AbstractScript {
             getSkills().hoverSkill(Skill.MAGIC);
             sleep(Calculations.random(400, 600));
             nextExpCheck = nextExpCheck + Calculations.random(400, 1000);
-
         }
 
-        if (getInventory().contains("Water rune") && getInventory().contains("Body rune")){
+        // Verify that cursing and alching is possible
+        if (!getTabs().isOpen(Tab.MAGIC)){
+            getTabs().open(Tab.MAGIC);
+            sleepUntil(() -> getTabs().isOpen(Tab.CLAN),1500);
+        }
+
+        if (sv.curse && getMagic().canCast(Normal.CURSE)){
             if (action < 9){
                 log ("Antiban");
                 antiban();
             } else {
-                if (!getTabs().isOpen(Tab.MAGIC)){
-                    getTabs().open(Tab.MAGIC);
-                    sleepUntil(() -> getTabs().isOpen(Tab.CLAN),1500);
-                } else {
-                    if (target != null && target.exists() && target.getHealthPercent()>0){
-                        log("Casting curse on: " + target.getName());
-                        if (getMagic().castSpellOn(Normal.CURSE, target)){
-                            castCount++;
-                            sleep(Calculations.random(800,1200));
+                if (target != null && target.exists() && target.getHealthPercent()>0){
+                    log("Casting curse on: " + target.getName());
+                    if (getMagic().castSpellOn(Normal.CURSE, target)){
+                        castCount++;
+                        sleep(Calculations.random(800,1200));
+                    }
+                }
+            }
+        }
+
+        if (sv.highAlch && getMagic().canCast(Normal.HIGH_LEVEL_ALCHEMY) && highAlchTarget() != null){
+
+            if (getMagic().castSpell(Normal.HIGH_LEVEL_ALCHEMY)){
+                if (getTabs().isOpen(Tab.INVENTORY)){
+                    getTabs().open(Tab.INVENTORY);
+                    sleepUntil(() -> getTabs().isOpen(Tab.INVENTORY), 500);
+                }
+                if (getMagic().isSpellSelected()){
+                    if (getInventory().interact(highAlchTarget(), "Cast on")){
+                        sleep(Calculations.random(500,1000));
+                    }
+                }
+            }
+        }
+    }
+    private String highAlchTarget(){
+        String target = null;
+        for (String i : sv.alchItems){
+            if (getInventory().contains(i)){
+                target = getInventory().get(i).getName();
+                break;
+            }
+        }
+        return target;
+    }
+    private boolean verifyCanCastSpell(Normal spellName){
+        boolean requireWaterRune = true;
+        boolean requireEarthRune = true;
+        boolean requireFireRune = true;
+
+        int waterRuneAmt = 0;
+        int earthRuneAmt = 0;
+        int fireRuneAmt = 0;
+        int bodyRuneAmt = 0;
+        int natureRuneAmt = 0;
+        String currentTome = "";
+        String currentStaff = "";
+
+        boolean canCast = false;
+        if (getInventory().contains("Water rune")){
+            waterRuneAmt = getInventory().count("Water rune");
+        }
+
+        if (getInventory().contains("Earth rune")){
+            earthRuneAmt = getInventory().count("Earth rune");
+
+        }
+
+        if (getInventory().contains("Fire rune")){
+            fireRuneAmt = getInventory().count("Fire rune");
+        }
+
+        if (getInventory().contains("Body rune")){
+            bodyRuneAmt = getInventory().count("Body rune");
+        }
+
+        if (getInventory().contains("Nature rune")){
+            natureRuneAmt = getInventory().count("Nature rune");
+        }
+
+
+
+        if (getEquipment().getItemInSlot(EquipmentSlot.WEAPON.getSlot()) != null){
+            currentStaff = getEquipment().getItemInSlot(EquipmentSlot.WEAPON.getSlot()).getName().toLowerCase();
+        }
+
+
+        if (getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot()) != null){
+            currentTome = getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot()).getName().toLowerCase();
+        }
+
+
+
+        if (currentStaff.contains("water") || currentStaff.contains("steam") || currentStaff.contains("mud")){
+            requireWaterRune = false;
+        }
+
+        if (currentStaff.contains("earth") || currentStaff.contains("lava") || currentStaff.contains("mud")){
+            requireEarthRune = false;
+        }
+
+        if (currentStaff.contains("fire") || currentStaff.contains("lava") || currentStaff.contains("steam")){
+            requireFireRune = false;
+        }
+
+        if (currentTome.contains("fire")){
+            requireFireRune = false;
+        }
+
+        if (spellName.equals(Normal.CURSE)){
+            if (bodyRuneAmt > 1){
+                if (!requireWaterRune || waterRuneAmt > 2){
+                    if (!requireEarthRune || earthRuneAmt > 3){
+                        canCast = true;
+                    }
+                }
+            }
+        }
+
+        if (spellName.equals(Normal.HIGH_LEVEL_ALCHEMY)){
+            if (natureRuneAmt > 1){
+                if (!requireFireRune || fireRuneAmt > 5){
+                    for (String i : sv.alchItems){
+                        if (getInventory().contains(i)){
+                            canCast = true;
                         }
                     }
                 }
             }
-
-
-        } else {
-            log("out of runes");
-            stop();
         }
+
+        return canCast;
     }
     private void antiban() {
         int random = Calculations.random(1, 100);
+        long tmpValue = 0;
+        antibanValue = 0;
         if (random < 20) {
             if (!getTabs().isOpen(Tab.STATS)) {
                 getTabs().open(Tab.STATS);
-                if (random < 4) {
-                    getSkills().hoverSkill(Skill.MAGIC);
-                } else if (random < 8) {
-                    getSkills().hoverSkill(Skill.MAGIC);
-                } else if (random < 12) {
-                    getSkills().hoverSkill(Skill.MAGIC);
-                } else if (random < 16) {
-                    getSkills().hoverSkill(Skill.MAGIC);
-                } else {
-                    getSkills().hoverSkill(Skill.MAGIC);
+                for (Skill s : Skill.values()){
+                    if (getSkillTracker().getGainedExperience(s) > 0){
+                        antibanValue += getSkillTracker().getGainedExperience(s);
+                    }
+                }
+
+                if (antibanValue > 0){
+                    long checkValue = Calculations.random(1,antibanValue);
+                    for (Skill s : Skill.values()){
+                        if (getSkillTracker().getGainedExperience(s) > 0){
+                            tmpValue += getSkillTracker().getGainedExperience(s);
+                            if (tmpValue >= antibanValue){
+                                getSkills().hoverSkill(s);
+                                break;
+                            }
+                        }
+                    }
                 }
                 sleepUntil(() -> !getLocalPlayer().isInCombat() || !getLocalPlayer().isAnimating(), Calculations.random(300, 500));
             }

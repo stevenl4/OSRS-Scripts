@@ -5,5 +5,8 @@ package util;
  */
 public class ScriptVars {
     public String npcName;
+    public String [] alchItems;
+    public boolean curse;
+    public boolean highAlch;
     public boolean started = false;
 }
