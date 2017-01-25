@@ -84,7 +84,7 @@ public class Main extends AbstractScript {
         }
 
         if (getInventory().contains("Water rune") && getInventory().contains("Body rune")){
-            if (action < 3){
+            if (action < 9){
                 log ("Antiban");
                 antiban();
             } else {
@@ -126,6 +126,7 @@ public class Main extends AbstractScript {
                 }
                 sleepUntil(() -> !getLocalPlayer().isInCombat() || !getLocalPlayer().isAnimating(), Calculations.random(300, 500));
             }
+
         } else if (random <= 25) {
             if (!getTabs().isOpen(Tab.INVENTORY)) {
                 getTabs().open(Tab.INVENTORY);
