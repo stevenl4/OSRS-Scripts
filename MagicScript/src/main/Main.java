@@ -127,6 +127,7 @@ public class Main extends AbstractScript {
                     sleepUntil(() -> getTabs().isOpen(Tab.INVENTORY), 500);
                 }
                 if (getMagic().isSpellSelected()){
+                    // TODO find out what the action is
                     if (getInventory().interact(highAlchTarget(), "Cast on")){
                         sleep(Calculations.random(500,1000));
                     }
