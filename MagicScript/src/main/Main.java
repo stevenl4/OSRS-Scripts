@@ -80,7 +80,7 @@ public class Main extends AbstractScript {
     }
     private void selectTarget(){
         while (target == null || !target.exists()){
-            target = getNpcs().closest(n -> n.exists() && n.hasAction("Attack") && n.getLevel() < 20 && n.distance(getLocalPlayer()) < 10 && n.isOnScreen());
+            target = getNpcs().closest(n -> n.exists() && n.hasAction("Attack") && n.getLevel() < 20 && n.distance(getLocalPlayer()) < 10 && n.isOnScreen() && n.isInCombat() && !n.isInteractedWith());
             log("selected target: " + target.getName());
         }
 
