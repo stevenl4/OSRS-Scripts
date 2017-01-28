@@ -238,7 +238,7 @@ public class Main extends AbstractScript {
 
             }
 
-            if (getPrayer().isActive(Prayer.PROTECT_FROM_MELEE) && getSkills().getBoostedLevels(Skill.HITPOINTS) <= sv.maxHp){
+            if (getPrayer().isActive(Prayer.PROTECT_FROM_MELEE) && getSkills().getBoostedLevels(Skill.HITPOINTS) <= sv.maxHp && !outOfOverloadPots){
                 getPrayer().toggle(false, Prayer.PROTECT_FROM_MELEE);
             }
 
@@ -265,7 +265,6 @@ public class Main extends AbstractScript {
             }
 
             if (timeSinceLastRapidHeal > nextRapidHealFlick) {
-
                 getPrayer().flick(Prayer.RAPID_HEAL, Calculations.random(250,350));
                 nextRapidHealFlick = Calculations.random(40000,50000);
                 lastRapidHeal = System.currentTimeMillis();
@@ -285,19 +284,22 @@ public class Main extends AbstractScript {
         }
 
         // Check prayer potion and set a level to use the next dose
-        if (getSkills().getBoostedLevels(Skill.PRAYER) < lowPrayerThreshold && !outOfPrayerPots && !outOfOverloadPots) {
-            outOfPrayerPots = true;
-            for (int i = 1; i < 5; i ++){
-                String potionName = "Prayer potion(" + i + ")";
-                if (getInventory().contains(potionName)) {
-                    getInventory().interact(potionName, "Drink");
-                    sleepUntil(() -> getSkills().getBoostedLevels(Skill.PRAYER) >= lowPrayerThreshold, 800);
-                    lowPrayerThreshold = Calculations.random(15,25);
-                    outOfPrayerPots = false;
-                    break;
+        if (getSkills().getBoostedLevels(Skill.PRAYER) < lowPrayerThreshold && !outOfPrayerPots) {
+            if (!outOfOverloadPots && sv.exitWhenOutOfOverload){
+                outOfPrayerPots = true;
+                for (int i = 1; i < 5; i ++){
+                    String potionName = "Prayer potion(" + i + ")";
+                    if (getInventory().contains(potionName)) {
+                        getInventory().interact(potionName, "Drink");
+                        sleepUntil(() -> getSkills().getBoostedLevels(Skill.PRAYER) >= lowPrayerThreshold, 800);
+                        lowPrayerThreshold = Calculations.random(15,25);
+                        outOfPrayerPots = false;
+                        break;
+                    }
                 }
             }
         }
+
         // Drink Overload Potion
         if (timeSinceLastOverloadDose >= 300000 && getSkills().getBoostedLevels(Skill.HITPOINTS) >= 51 && !outOfOverloadPots) {
             outOfOverloadPots = true;
@@ -343,11 +345,14 @@ public class Main extends AbstractScript {
                 sleepUntil(() -> !goPowerSurge.exists(), 5000);
                 log("Power surge activated");
                 getCamera().rotateToPitch(Calculations.random(350,383));
-                lastPowerSurge = System.currentTimeMillis();
-
+                if (!goPowerSurge.exists()){
+                    lastPowerSurge = System.currentTimeMillis();
+                }
             }
             lastPowerUpCheck = System.currentTimeMillis();
         }
+
+
         // Start speccing
         if (sv.useSpecialOnlyOnPowerUp){
             if (timeSinceLastPowerSurge <= 46000 ) {
@@ -531,9 +536,9 @@ public class Main extends AbstractScript {
             g.drawString("Ranged exp (p/h): " + getSkillTracker().getGainedExperience(Skill.RANGED) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.RANGED)) + ")", 5, 105);
 
             g.drawString("Next prayer drink: " + lowPrayerThreshold, 5, 220);
-            g.drawString("Next absorption drink: " + lowAbsorptionThreshold, 5, 255);
-            g.drawString("Time since last flick: " + nextRapidHealFlick, 5, 270);
-            g.drawString("Overload time left: " + timeSinceLastOverloadDose, 5, 295);
+            g.drawString("Next absorption drink: " + lowAbsorptionThreshold, 5, 235);
+            g.drawString("Time since last flick: " + nextRapidHealFlick, 5, 250);
+            g.drawString("Overload timer: " + timeSinceLastOverloadDose, 5, 265);
 
         }
 
