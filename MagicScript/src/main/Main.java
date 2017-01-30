@@ -167,6 +167,10 @@ public class Main extends AbstractScript {
             castAlch = false;
         }
 
+        if (!castAlch && !castCurse){
+            log("Out of runes/items, stopping");
+            stop();
+        }
         if (castCurse){
 
             if (action < sv.antibanRate){
