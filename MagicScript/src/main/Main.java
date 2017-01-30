@@ -1,4 +1,5 @@
 package main;
+import gui.MagicGui;
 import org.dreambot.api.methods.Calculations;
 import org.dreambot.api.methods.container.impl.equipment.Equipment;
 import org.dreambot.api.methods.container.impl.equipment.EquipmentSlot;
@@ -44,14 +45,16 @@ public class Main extends AbstractScript {
         }
         getSkillTracker().start(Skill.MAGIC);
         nextExpCheck = Calculations.random(300,500);
-        sv.highAlch = false;
-        sv.npcLevel = 20;
-        sv.curse = true;
-        sv.alchItems = new String[] {};
+
+        MagicGui gui = new MagicGui(sv);
+        gui.frame.setVisible(true);
+        while (!sv.started){
+            sleep(1000);
+        }
         if (sv.alchItems.length == 0){
             sv.highAlch = false;
         }
-        sv.started = true;
+
     }
 
     private State getState(){
@@ -143,6 +146,7 @@ public class Main extends AbstractScript {
                 if (getMagic().isSpellSelected()){
                     // TODO find out what the action is
                     if (getInventory().interact(highAlchTarget(), "Cast")){
+                        castCountAlch++;
                         sleep(Calculations.random(500,1000));
                     }
                 }
