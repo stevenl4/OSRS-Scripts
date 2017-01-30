@@ -19,7 +19,7 @@ import java.awt.*;
 /**
  * Created by steven.luo on 25/01/2017.
  */
-@ScriptManifest(category = Category.MAGIC, name = "Magic Script", author = "GB", version = 1.0, description = "Curses closest NPC")
+@ScriptManifest(category = Category.MAGIC, name = "Alch Splasher", author = "GB", version = 1.0, description = "Curses closest NPC")
 public class Main extends AbstractScript {
 
     ScriptVars sv = new ScriptVars();
@@ -47,10 +47,12 @@ public class Main extends AbstractScript {
         nextExpCheck = Calculations.random(300,500);
 
         MagicGui gui = new MagicGui(sv);
-        gui.frame.setVisible(true);
+        gui.setVisible(true);
         while (!sv.started){
             sleep(1000);
         }
+
+        log("Started");
         if (sv.alchItems.length == 0){
             sv.highAlch = false;
         }
@@ -82,11 +84,16 @@ public class Main extends AbstractScript {
         }
 
 
-        return Calculations.random(300, 500);
+        return Calculations.random(1000, 1100);
     }
     private void selectTarget(){
+        log("Selecting target");
         while (target == null || !target.exists()){
-            target = getNpcs().closest(n -> n.exists() && n.hasAction("Attack") && n.getLevel() < sv.npcLevel && n.distance(getLocalPlayer()) < 10 && n.isOnScreen() && n.isInCombat() && !n.isInteractedWith());
+            target = getNpcs().closest(n -> n.exists() && n.hasAction("Attack") && n.getLevel() < sv.npcLevel && n.isOnScreen() && !n.isInCombat() && !n.isInteractedWith());
+
+        }
+
+        if (target != null){
             log("selected target: " + target.getName());
         }
 
@@ -94,6 +101,7 @@ public class Main extends AbstractScript {
     private void cast(){
         Normal spellToCast;
         int action = Calculations.random(1,100);
+
         if (totalCastCount >= nextExpCheck){
             if (!getTabs().isOpen(Tab.STATS)) {
                 getTabs().open(Tab.STATS);
@@ -106,14 +114,19 @@ public class Main extends AbstractScript {
         }
 
         // Verify that cursing and alching is possible
-        if (getSkills().getRealLevel(Skill.MAGIC) >= 55){
-            sv.highAlch = true;
+        if (getSkills().getRealLevel(Skill.MAGIC) < 55){
+            sv.highAlch = false;
         }
 
-        if (getMagic().canCast(Normal.CURSE)){
-            spellToCast = Normal.CONFUSE;
+        if (!getTabs().isOpen(Tab.MAGIC)){
+            getTabs().open(Tab.MAGIC);
+            sleepUntil(() -> getTabs().isOpen(Tab.MAGIC), 1000);
+        }
+
+        if (verifyCanCastSpell(Normal.CURSE)){
+            spellToCast = Normal.CURSE;
         } else {
-            if (getMagic().canCast(Normal.WEAKEN)){
+            if (verifyCanCastSpell(Normal.WEAKEN)){
                 spellToCast = Normal.WEAKEN;
             } else {
                 spellToCast = Normal.CONFUSE;
@@ -121,22 +134,23 @@ public class Main extends AbstractScript {
         }
 
 
-        if (sv.curse && getMagic().canCast(spellToCast)){
+        if (sv.curse && verifyCanCastSpell(spellToCast)){
+
             if (action < sv.antibanRate){
                 log ("Antiban");
                 antiban();
             } else {
                 if (target != null && target.exists() && target.getHealthPercent()>0){
-                    log("Casting curse on: " + target.getName());
+
                     if (getMagic().castSpellOn(spellToCast, target)){
                         castCountCurse++;
-                        sleep(Calculations.random(1200,1300));
+                        sleep(Calculations.random(200,400));
                     }
                 }
             }
         }
 
-        if (sv.highAlch && getMagic().canCast(Normal.HIGH_LEVEL_ALCHEMY) && highAlchTarget() != null){
+        if (sv.highAlch && verifyCanCastSpell(Normal.HIGH_LEVEL_ALCHEMY) && highAlchTarget() != null){
 
             if (getMagic().castSpell(Normal.HIGH_LEVEL_ALCHEMY)){
                 if (!getTabs().isOpen(Tab.INVENTORY)){
@@ -147,7 +161,7 @@ public class Main extends AbstractScript {
                     // TODO find out what the action is
                     if (getInventory().interact(highAlchTarget(), "Cast")){
                         castCountAlch++;
-                        sleep(Calculations.random(500,1000));
+                        sleep(Calculations.random(200,500));
                     }
                 }
             }
@@ -227,19 +241,40 @@ public class Main extends AbstractScript {
             requireFireRune = false;
         }
 
-        if (spellName.equals(Normal.CURSE)){
-            if (bodyRuneAmt > 1){
-                if (!requireWaterRune || waterRuneAmt > 2){
-                    if (!requireEarthRune || earthRuneAmt > 3){
+        if (spellName.equals(Normal.CURSE) && getSkills().getBoostedLevels(Skill.MAGIC) >= 19){
+            if (bodyRuneAmt >= 1){
+                if (!requireWaterRune || waterRuneAmt >= 2){
+                    if (!requireEarthRune || earthRuneAmt >= 3){
                         canCast = true;
                     }
                 }
             }
         }
 
+        if (spellName.equals(Normal.WEAKEN) && getSkills().getBoostedLevels(Skill.MAGIC) >= 11){
+            if (bodyRuneAmt >= 1){
+                if (!requireWaterRune || waterRuneAmt >= 3){
+                    if (!requireEarthRune || earthRuneAmt >= 2){
+                        canCast = true;
+                    }
+                }
+            }
+        }
+
+        if (spellName.equals(Normal.CONFUSE) && getSkills().getBoostedLevels(Skill.MAGIC) >= 3){
+            if (bodyRuneAmt >= 1){
+                if (!requireWaterRune || waterRuneAmt > 3){
+                    if(!requireEarthRune || earthRuneAmt >=2){
+                        canCast = true;
+                    }
+
+                }
+            }
+        }
+
         if (spellName.equals(Normal.HIGH_LEVEL_ALCHEMY)){
-            if (natureRuneAmt > 1){
-                if (!requireFireRune || fireRuneAmt > 5){
+            if (natureRuneAmt >= 1){
+                if (!requireFireRune || fireRuneAmt >= 5){
                     for (String i : sv.alchItems){
                         if (getInventory().contains(i)){
                             canCast = true;
@@ -304,7 +339,7 @@ public class Main extends AbstractScript {
             g.drawString("Runtime: " + timer.format(),5,30);
             g.drawString("Magic exp (p/h): " + getSkillTracker().getGainedExperience(Skill.MAGIC) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.MAGIC)) + ")",5,45);
             g.drawString("Target: " + target.getName(),5,60);
-            g.drawString("Cast Count: " + totalCastCount + " | next Exp Check" + nextExpCheck, 5, 75 );
+            g.drawString("Cast Count: " + totalCastCount + " | next Exp Check " + nextExpCheck, 5, 75 );
         }
     }
 }

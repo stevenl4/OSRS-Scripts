@@ -44,7 +44,7 @@ public class MagicGui extends JFrame {
 	public MagicGui() {
 		setTitle("Alch Splasher");
 		setAlwaysOnTop(true);
-		setResizeable(false);
+		setResizable(false);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		setBounds(100, 100, 294, 379);
 		contentPane = new JPanel();
