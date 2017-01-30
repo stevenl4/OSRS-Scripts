@@ -22,11 +22,12 @@ import java.awt.*;
 public class Main extends AbstractScript {
 
     ScriptVars sv = new ScriptVars();
-    private long castCount;
+    private long castCountCurse;
+    private long castCountAlch;
+    private long totalCastCount;
     private long nextExpCheck;
     private long antibanValue;
-    private boolean canCurse;
-    private boolean canAlch;
+
     NPC target;
     private RunTimer timer;
 
@@ -44,6 +45,7 @@ public class Main extends AbstractScript {
         getSkillTracker().start(Skill.MAGIC);
         nextExpCheck = Calculations.random(300,500);
         sv.highAlch = false;
+        sv.npcLevel = 20;
         sv.curse = true;
         sv.alchItems = new String[] {};
         if (sv.alchItems.length == 0){
@@ -66,6 +68,7 @@ public class Main extends AbstractScript {
             getCombat().toggleAutoRetaliate(false);
             sleepUntil(() -> !getCombat().isAutoRetaliateOn(), 1000);
         }
+        totalCastCount = castCountAlch + castCountCurse;
         switch (getState()){
             case SELECT_TARGET:
                 selectTarget();
@@ -80,14 +83,15 @@ public class Main extends AbstractScript {
     }
     private void selectTarget(){
         while (target == null || !target.exists()){
-            target = getNpcs().closest(n -> n.exists() && n.hasAction("Attack") && n.getLevel() < 20 && n.distance(getLocalPlayer()) < 10 && n.isOnScreen() && n.isInCombat() && !n.isInteractedWith());
+            target = getNpcs().closest(n -> n.exists() && n.hasAction("Attack") && n.getLevel() < sv.npcLevel && n.distance(getLocalPlayer()) < 10 && n.isOnScreen() && n.isInCombat() && !n.isInteractedWith());
             log("selected target: " + target.getName());
         }
 
     }
     private void cast(){
+        Normal spellToCast;
         int action = Calculations.random(1,100);
-        if (castCount >= nextExpCheck){
+        if (totalCastCount >= nextExpCheck){
             if (!getTabs().isOpen(Tab.STATS)) {
                 getTabs().open(Tab.STATS);
                 sleepUntil(() -> getTabs().isOpen(Tab.STATS), 1000);
@@ -104,16 +108,27 @@ public class Main extends AbstractScript {
             sleepUntil(() -> getTabs().isOpen(Tab.CLAN),1500);
         }
 
-        if (sv.curse && getMagic().canCast(Normal.CURSE)){
-            if (action < 9){
+        if (getMagic().canCast(Normal.CURSE)){
+            spellToCast = Normal.CONFUSE;
+        } else {
+            if (getMagic().canCast(Normal.WEAKEN)){
+                spellToCast = Normal.WEAKEN;
+            } else {
+                spellToCast = Normal.CONFUSE;
+            }
+        }
+
+
+        if (sv.curse && getMagic().canCast(spellToCast)){
+            if (action < sv.antibanRate){
                 log ("Antiban");
                 antiban();
             } else {
                 if (target != null && target.exists() && target.getHealthPercent()>0){
                     log("Casting curse on: " + target.getName());
-                    if (getMagic().castSpellOn(Normal.CURSE, target)){
-                        castCount++;
-                        sleep(Calculations.random(800,1200));
+                    if (getMagic().castSpellOn(spellToCast, target)){
+                        castCountCurse++;
+                        sleep(Calculations.random(1200,1300));
                     }
                 }
             }
@@ -122,13 +137,13 @@ public class Main extends AbstractScript {
         if (sv.highAlch && getMagic().canCast(Normal.HIGH_LEVEL_ALCHEMY) && highAlchTarget() != null){
 
             if (getMagic().castSpell(Normal.HIGH_LEVEL_ALCHEMY)){
-                if (getTabs().isOpen(Tab.INVENTORY)){
+                if (!getTabs().isOpen(Tab.INVENTORY)){
                     getTabs().open(Tab.INVENTORY);
                     sleepUntil(() -> getTabs().isOpen(Tab.INVENTORY), 500);
                 }
                 if (getMagic().isSpellSelected()){
                     // TODO find out what the action is
-                    if (getInventory().interact(highAlchTarget(), "Cast on")){
+                    if (getInventory().interact(highAlchTarget(), "Cast")){
                         sleep(Calculations.random(500,1000));
                     }
                 }
@@ -251,7 +266,7 @@ public class Main extends AbstractScript {
                     for (Skill s : Skill.values()){
                         if (getSkillTracker().getGainedExperience(s) > 0){
                             tmpValue += getSkillTracker().getGainedExperience(s);
-                            if (tmpValue >= antibanValue){
+                            if (tmpValue >= checkValue){
                                 getSkills().hoverSkill(s);
                                 break;
                             }
@@ -286,7 +301,7 @@ public class Main extends AbstractScript {
             g.drawString("Runtime: " + timer.format(),5,30);
             g.drawString("Magic exp (p/h): " + getSkillTracker().getGainedExperience(Skill.MAGIC) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.MAGIC)) + ")",5,45);
             g.drawString("Target: " + target.getName(),5,60);
-            g.drawString("Cast Count: " + castCount + " | next Exp Check" + nextExpCheck, 5, 75 );
+            g.drawString("Cast Count: " + totalCastCount + " | next Exp Check" + nextExpCheck, 5, 75 );
         }
     }
 }
