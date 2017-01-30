@@ -98,7 +98,6 @@ public class MagicGui extends JFrame{
                 var.antibanRate = sldrAntibanRate.getValue();
                 var.highAlch = rdbtnHighAlch.isSelected();
                 var.curse = rdbtnCurse.isSelected();
-                log("Curse?: " + rdbtnCurse.isSelected());
                 var.alchItems = txtItemName.getText().split(";");
                 var.started = true;
 

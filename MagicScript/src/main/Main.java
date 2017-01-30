@@ -19,7 +19,7 @@ import java.awt.*;
 /**
  * Created by steven.luo on 25/01/2017.
  */
-@ScriptManifest(category = Category.MAGIC, name = "Alch Splasher", author = "GB", version = 1.0, description = "Curses closest NPC")
+@ScriptManifest(category = Category.MAGIC, name = "Alch Splasher", author = "GB", version = 1.0, description = "Curses NPCs while alching items")
 public class Main extends AbstractScript {
 
     ScriptVars sv = new ScriptVars();
@@ -51,7 +51,9 @@ public class Main extends AbstractScript {
         while (!sv.started){
             sleep(1000);
         }
-
+        if (sv.npcLevel == 0){
+            sv.npcLevel = 10000;
+        }
         log("Started");
         if (sv.alchItems.length == 0){
             sv.highAlch = false;
@@ -60,11 +62,16 @@ public class Main extends AbstractScript {
     }
 
     private State getState(){
-        if (target == null || !target.exists()){
-            return State.SELECT_TARGET;
+        if (sv.curse){
+            if (target == null || !target.exists()){
+                return State.SELECT_TARGET;
+            } else {
+                return State.CAST;
+            }
         } else {
             return State.CAST;
         }
+
 
     }
     @Override
@@ -84,23 +91,38 @@ public class Main extends AbstractScript {
         }
 
 
-        return Calculations.random(1000, 1100);
+        return Calculations.random(700, 800);
     }
     private void selectTarget(){
         log("Selecting target");
-        while (target == null || !target.exists()){
-            target = getNpcs().closest(n -> n.exists() && n.hasAction("Attack") && n.getLevel() < sv.npcLevel && n.isOnScreen() && !n.isInCombat() && !n.isInteractedWith());
+        int tryCount = 0;
+        if (getLocalPlayer().isInCombat()){
+            target = getNpcs().closest(n -> n.isInteracting(getLocalPlayer()));
+        }
 
+        while (target == null || !target.exists()){
+            if (tryCount > 50){
+                break;
+            }
+            target = getNpcs().closest(n -> n.exists() && n.hasAction("Attack") && n.getLevel() < sv.npcLevel && n.isOnScreen() && !n.isInCombat() && !n.isInteractedWith());
+            tryCount++;
+            sleep(50);
         }
 
         if (target != null){
             log("selected target: " + target.getName());
+        } else {
+            log ("No nearby targets, move somewhere else");
+            stop();
         }
 
     }
     private void cast(){
         Normal spellToCast;
         int action = Calculations.random(1,100);
+        boolean castAlch;
+        boolean castCurse;
+
 
         if (totalCastCount >= nextExpCheck){
             if (!getTabs().isOpen(Tab.STATS)) {
@@ -133,8 +155,19 @@ public class Main extends AbstractScript {
             }
         }
 
-
         if (sv.curse && verifyCanCastSpell(spellToCast)){
+            castCurse = true;
+        } else {
+            castCurse = false;
+        }
+
+        if (sv.highAlch && verifyCanCastSpell(Normal.HIGH_LEVEL_ALCHEMY) && highAlchTarget() != null){
+            castAlch = true;
+        } else {
+            castAlch = false;
+        }
+
+        if (castCurse){
 
             if (action < sv.antibanRate){
                 log ("Antiban");
@@ -144,13 +177,16 @@ public class Main extends AbstractScript {
 
                     if (getMagic().castSpellOn(spellToCast, target)){
                         castCountCurse++;
-                        sleep(Calculations.random(200,400));
+                        if (!castAlch){
+                            sleep(Calculations.random(800,900));
+                        }
                     }
                 }
             }
         }
 
-        if (sv.highAlch && verifyCanCastSpell(Normal.HIGH_LEVEL_ALCHEMY) && highAlchTarget() != null){
+
+        if (castAlch){
 
             if (getMagic().castSpell(Normal.HIGH_LEVEL_ALCHEMY)){
                 if (!getTabs().isOpen(Tab.INVENTORY)){
@@ -158,10 +194,12 @@ public class Main extends AbstractScript {
                     sleepUntil(() -> getTabs().isOpen(Tab.INVENTORY), 500);
                 }
                 if (getMagic().isSpellSelected()){
-                    // TODO find out what the action is
+
                     if (getInventory().interact(highAlchTarget(), "Cast")){
                         castCountAlch++;
-                        sleep(Calculations.random(200,500));
+                        if (!castCurse){
+                            sleep(Calculations.random(1200,1300));
+                        }
                     }
                 }
             }
@@ -170,7 +208,9 @@ public class Main extends AbstractScript {
     private String highAlchTarget(){
         String target = null;
         for (String i : sv.alchItems){
+
             if (getInventory().contains(i)){
+                log ("Found " + i + " in inventory");
                 target = getInventory().get(i).getName();
                 break;
             }
@@ -284,6 +324,18 @@ public class Main extends AbstractScript {
             }
         }
 
+        if (spellName.equals(Normal.LOW_LEVEL_ALCHEMY)){
+            if (natureRuneAmt >= 1){
+                if (!requireFireRune || fireRuneAmt >=3){
+                    for (String i : sv.alchItems){
+                        if (getInventory().contains(i)){
+                            canCast = true;
+                        }
+                    }
+                }
+            }
+        }
+
         return canCast;
     }
     private void antiban() {
@@ -324,12 +376,18 @@ public class Main extends AbstractScript {
                 getTabs().open(Tab.COMBAT);
                 sleep(Calculations.random(100, 500));
             }
+        } else if (random <= 35) {
+            // rotate camera
+
+            getCamera().rotateToTile(getLocalPlayer().getSurroundingArea(4).getRandomTile());
+            getCamera().rotateToPitch(Calculations.random(275, 383));
         } else {
             if (getMouse().isMouseInScreen()) {
                 if (getMouse().moveMouseOutsideScreen()) {
                     sleepUntil(() -> !getLocalPlayer().isInCombat() || !getLocalPlayer().isAnimating(), Calculations.random(500, 1000));
                 }
             }
+
         }
     }
     @Override
@@ -338,8 +396,8 @@ public class Main extends AbstractScript {
             g.drawString("State: " + getState().toString(), 5, 15);
             g.drawString("Runtime: " + timer.format(),5,30);
             g.drawString("Magic exp (p/h): " + getSkillTracker().getGainedExperience(Skill.MAGIC) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.MAGIC)) + ")",5,45);
-            g.drawString("Target: " + target.getName(),5,60);
-            g.drawString("Cast Count: " + totalCastCount + " | next Exp Check " + nextExpCheck, 5, 75 );
+            g.drawString("Curse count (p/h): " + castCountCurse + " (" + timer.getPerHour(castCountCurse) +")", 5,60);
+            g.drawString("Alch count (p/h): " + castCountAlch + " (" + timer.getPerHour(castCountAlch) + ")", 5,75);
         }
     }
 }
