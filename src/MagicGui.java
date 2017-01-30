@@ -1,25 +1,26 @@
+import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.EventQueue;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.SwingConstants;
-import java.awt.Font;
-import java.awt.Color;
-import javax.swing.JTabbedPane;
+import javax.swing.JPanel;
 import javax.swing.JRadioButton;
-import javax.swing.UIManager;
-import javax.swing.JTextField;
-import javax.swing.JButton;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
 import javax.swing.JSlider;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.UIManager;
+import javax.swing.border.EmptyBorder;
 
 
-public class MagicGui_Old {
-
-	private JFrame frame;
+public class MagicGui extends JFrame {
 	private JTextField txtItemName;
 	private JTextField txtNpcLevel;
+	private JPanel contentPane;
 
 	/**
 	 * Launch the application.
@@ -28,8 +29,8 @@ public class MagicGui_Old {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					MagicGui_Old window = new MagicGui_Old();
-					window.frame.setVisible(true);
+					MagicGui frame = new MagicGui();
+					frame.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -38,21 +39,18 @@ public class MagicGui_Old {
 	}
 
 	/**
-	 * Create the application.
+	 * Create the frame.
 	 */
-	public MagicGui_Old() {
-		initialize();
-	}
-
-	/**
-	 * Initialize the contents of the frame.
-	 */
-	private void initialize() {
-		frame = new JFrame();
-		frame.getContentPane().setBackground(UIManager.getColor("Button.background"));
-		frame.setBounds(100, 100, 294, 381);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.getContentPane().setLayout(null);
+	public MagicGui() {
+		setTitle("Alch Splasher");
+		setAlwaysOnTop(true);
+		setResizeable(false);
+		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		setBounds(100, 100, 294, 379);
+		contentPane = new JPanel();
+		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+		setContentPane(contentPane);
+		contentPane.setLayout(null);
 		
 		JLabel lblName = new JLabel("Splash + Alcher");
 		lblName.setForeground(Color.BLACK);
@@ -60,41 +58,41 @@ public class MagicGui_Old {
 		lblName.setFont(new Font("Tahoma", Font.PLAIN, 27));
 		lblName.setHorizontalAlignment(SwingConstants.CENTER);
 		lblName.setBounds(10, 11, 258, 52);
-		frame.getContentPane().add(lblName);
+		contentPane.add(lblName);
 		
 		JRadioButton rdbtnCurse = new JRadioButton("Confuse / Weaken / Curse");
 		rdbtnCurse.setSelected(true);
 		rdbtnCurse.setBounds(10, 70, 258, 23);
-		frame.getContentPane().add(rdbtnCurse);
+		contentPane.add(rdbtnCurse);
 		
 		JRadioButton rdbtnHighAlch = new JRadioButton("High Alch");
 		rdbtnHighAlch.setBounds(10, 128, 109, 23);
-		frame.getContentPane().add(rdbtnHighAlch);
+		contentPane.add(rdbtnHighAlch);
 		
 		JLabel lblItemName = new JLabel("Item Name");
 		lblItemName.setBounds(10, 158, 65, 14);
-		frame.getContentPane().add(lblItemName);
+		contentPane.add(lblItemName);
 		
 		txtItemName = new JTextField();
 		txtItemName.setBounds(91, 155, 177, 20);
-		frame.getContentPane().add(txtItemName);
+		contentPane.add(txtItemName);
 		txtItemName.setColumns(10);
 		
 		JLabel lblMaxTargetLvl = new JLabel("Max Target Lvl");
 		lblMaxTargetLvl.setBounds(10, 103, 162, 14);
-		frame.getContentPane().add(lblMaxTargetLvl);
+		contentPane.add(lblMaxTargetLvl);
 		
 		txtNpcLevel = new JTextField();
 		txtNpcLevel.setHorizontalAlignment(SwingConstants.CENTER);
 		txtNpcLevel.setText("10");
 		txtNpcLevel.setColumns(10);
 		txtNpcLevel.setBounds(182, 100, 86, 20);
-		frame.getContentPane().add(txtNpcLevel);
+		contentPane.add(txtNpcLevel);
 		
 		JLabel lblAntibanRate = new JLabel("Antiban Rate");
 		lblAntibanRate.setHorizontalAlignment(SwingConstants.CENTER);
 		lblAntibanRate.setBounds(10, 228, 258, 14);
-		frame.getContentPane().add(lblAntibanRate);
+		contentPane.add(lblAntibanRate);
 		
 		JSlider sldrAntibanRate = new JSlider();
 		sldrAntibanRate.setValue(10);
@@ -104,16 +102,17 @@ public class MagicGui_Old {
 		sldrAntibanRate.setSnapToTicks(true);
 		sldrAntibanRate.setPaintTicks(true);
 		sldrAntibanRate.setBounds(10, 253, 258, 23);
-		frame.getContentPane().add(sldrAntibanRate);
+		contentPane.add(sldrAntibanRate);
 		
 		JButton btnNewButton = new JButton("Start");
 		btnNewButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				
-				frame.dispose();
+				dispose();
 			}
 		});
 		btnNewButton.setBounds(10, 287, 258, 45);
-		frame.getContentPane().add(btnNewButton);
+		contentPane.add(btnNewButton);
 	}
+
 }
