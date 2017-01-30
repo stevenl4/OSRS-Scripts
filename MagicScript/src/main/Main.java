@@ -103,9 +103,8 @@ public class Main extends AbstractScript {
         }
 
         // Verify that cursing and alching is possible
-        if (!getTabs().isOpen(Tab.MAGIC)){
-            getTabs().open(Tab.MAGIC);
-            sleepUntil(() -> getTabs().isOpen(Tab.CLAN),1500);
+        if (getSkills().getRealLevel(Skill.MAGIC) >= 55){
+            sv.highAlch = true;
         }
 
         if (getMagic().canCast(Normal.CURSE)){
