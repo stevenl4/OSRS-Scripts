@@ -106,6 +106,10 @@ public class Main extends AbstractScript {
             if (n.getName() == null || !n.getName().equals("Al-Kharid warrior")){
                 return false;
             }
+
+            if (!trainingArea.contains(n)){
+                return false;
+            }
             if (n.isInCombat()){
                 Character c = n.getInteractingCharacter();
                 if (c == null || c.getName() == null) {
