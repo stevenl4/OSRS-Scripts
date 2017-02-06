@@ -53,9 +53,12 @@ public class NmzGui extends JFrame {
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		contentPane.setLayout(null);
 		setContentPane(contentPane);
-		
-		
-		
+
+
+		JRadioButton rdbtnMultiRun = new JRadioButton("Multiple Runs?");
+		rdbtnMultiRun.setHorizontalAlignment(SwingConstants.LEFT);
+		rdbtnMultiRun.setBounds(354, 241, 146, 23);
+		contentPane.add(rdbtnMultiRun);
 		
 		JLabel lblNewLabel = new JLabel("Spec Percentage");
 		lblNewLabel.setBounds(10, 83, 146, 14);
@@ -195,9 +198,6 @@ public class NmzGui extends JFrame {
 		btnNewButton.setBounds(10, 375, 538, 36);
 		contentPane.add(btnNewButton);
 		
-		JRadioButton rdbtnMultiRun = new JRadioButton("Multiple Runs?");
-		rdbtnMultiRun.setHorizontalAlignment(SwingConstants.LEFT);
-		rdbtnMultiRun.setBounds(354, 241, 146, 23);
-		contentPane.add(rdbtnMultiRun);
+
 	}
 }

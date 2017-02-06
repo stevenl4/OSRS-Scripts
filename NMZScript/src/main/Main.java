@@ -2,6 +2,7 @@ package main;
 
 
 import gui.Gui;
+import gui.NmzGui;
 import org.dreambot.api.methods.Calculations;
 import org.dreambot.api.methods.container.impl.equipment.EquipmentSlot;
 import org.dreambot.api.methods.map.Tile;
@@ -50,6 +51,7 @@ public class Main extends AbstractScript {
     private boolean outOfPrayerPots = false;
     private boolean outOfOverloadPots = false;
     private boolean useSpec = false;
+
     private int lowPrayerThreshold = 10;
     private int lowAbsorptionThreshold = 100;
     private Area startArea = new Area (2601,3118,2612,3112,0);
@@ -102,7 +104,7 @@ public class Main extends AbstractScript {
     @Override
     public void onStart() {
 
-        Gui gui = new Gui(sv);
+        NmzGui gui = new NmzGui(sv);
         gui.setVisible(true);
         while (!sv.started){
             sleep(1000);
@@ -129,6 +131,11 @@ public class Main extends AbstractScript {
         } else {
             specWeapon = null;
         }
+
+        // Toggle off absoprtionMethod if prayerMethod is selected
+
+        log("Absorption Method: " + sv.absorptionMethod);
+        log("Prayer Method: " + sv.prayerMethod);
 
         getSkillTracker().start(Skill.DEFENCE);
         getSkillTracker().start(Skill.ATTACK);
@@ -265,7 +272,10 @@ public class Main extends AbstractScript {
             }
 
             // Drink Absorption Potion
-            if (sv.exitWhenOutOfOverload && !outOfOverloadPots){
+            if (sv.exitWhenOutOfOverload && outOfOverloadPots){
+
+            } else {
+
                 if (absorptionPointsLeft < lowAbsorptionThreshold){
                     for (int i = 1; i < 5; i++){
                         String potionName = "Absorption (" + i + ")";
@@ -336,9 +346,8 @@ public class Main extends AbstractScript {
         // Check for special spawns
         if (timeSinceLastPowerUpCheck >= 1500) {
             // Check Zapper
-            // TODO: add logic to check which powerups are needed
             GameObject goZapper = getGameObjects().closest(gO -> gO.getName().contains("Zapper") && gO.hasAction("Activate"));
-            if (goZapper != null && goZapper.hasAction("Activate")) {
+            if (goZapper != null && goZapper.hasAction("Activate") && sv.useZapper) {
                 log("Zapper found");
                 getWalking().walk(goZapper);
                 sleepUntil(() -> getLocalPlayer().distance(getClient().getDestination()) < 3, 3000);
@@ -351,7 +360,7 @@ public class Main extends AbstractScript {
 
             // Check recurrent damange
             GameObject goRecurrentDamage = getGameObjects().closest(gO -> gO.getName().contains("Recurrent damage") && gO.hasAction("Activate"));
-            if (goRecurrentDamage != null && goRecurrentDamage.hasAction("Activate")){
+            if (goRecurrentDamage != null && goRecurrentDamage.hasAction("Activate") && sv.useConcurrentDamage){
                 log("Recurrent damage found");
                 getWalking().walk(goRecurrentDamage);
                 sleepUntil(() -> getLocalPlayer().distance(getClient().getDestination()) < 3,3000);
@@ -365,7 +374,7 @@ public class Main extends AbstractScript {
 
             // Check Power surge
             GameObject goPowerSurge = getGameObjects().closest(i -> i.getName().contains("Power surge") && i.hasAction("Activate"));
-            if (goPowerSurge != null && goPowerSurge.hasAction("Activate")) {
+            if (goPowerSurge != null && goPowerSurge.hasAction("Activate") && sv.usePowerSurge) {
                 log("Power surge found");
                 getWalking().walk(goPowerSurge);
                 sleepUntil(() -> getLocalPlayer().distance(getClient().getDestination()) < 3, 3000);
@@ -434,7 +443,7 @@ public class Main extends AbstractScript {
 
     }
     private boolean verifyEquipment() {
-        // TODO select potions in GUI
+        // TODO select potions in GUI and match here
         if (dreamArea.contains(getLocalPlayer())){
             return true;
         } else {
@@ -462,16 +471,21 @@ public class Main extends AbstractScript {
     }
 
     private void getRequiredEquipment() {
+        // TODO get potions
         // Getting potions
         log("restock not available yet, stopping script");
         stop();
+
+        // Get overloads
+        // Get prayer
+        // Get absorption
     }
     private void startDream() {
         dreamStartTimer = 0;
         NPC dominicOnion = getNpcs().closest("Dominic Onion");
         if (dominicOnion != null) {
             dominicOnion.interact("Dream");
-            sleepUntil(() -> getLocalPlayer().isInteractedWith(),10000);
+            sleepUntil(() -> getDialogues().getOptionIndex("Rumble") > 0,10000);
 
             if (getDialogues().getOptionIndex("Practice") > 0){
                 getDialogues().clickOption("Rumble");
@@ -510,7 +524,7 @@ public class Main extends AbstractScript {
         // Walk north
         int currentX = startTile.getX();
         int currentY = startTile.getY();
-        Tile newStandingPosition = new Tile(currentX, currentY + Calculations.random(10,20), 3);
+        Tile newStandingPosition = new Tile(currentX - Calculations.random(5,10), currentY + Calculations.random(10,20), 3);
         getWalking().walk(newStandingPosition);
         sleepUntil(() -> getLocalPlayer().getTile().distance(startTile) > 0 , 3000);
         dreamStartTimer = System.currentTimeMillis();
@@ -564,10 +578,10 @@ public class Main extends AbstractScript {
             g.drawString("HP exp (p/h): " + getSkillTracker().getGainedExperience(Skill.HITPOINTS) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.HITPOINTS)) + ")", 5,90);
             g.drawString("Ranged exp (p/h): " + getSkillTracker().getGainedExperience(Skill.RANGED) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.RANGED)) + ")", 5, 105);
 
-//            g.drawString("Next prayer drink: " + lowPrayerThreshold, 5, 220);
-//            g.drawString("Next absorption drink: " + lowAbsorptionThreshold, 5, 235);
-//            g.drawString("Time since last flick: " + nextRapidHealFlick, 5, 250);
-//            g.drawString("Overload timer: " + timeSinceLastOverloadDose, 5, 265);
+            g.drawString("Next prayer drink: " + lowPrayerThreshold, 5, 220);
+            g.drawString("Next absorption drink: " + lowAbsorptionThreshold, 5, 235);
+            g.drawString("Time since last flick: " + nextRapidHealFlick, 5, 250);
+            g.drawString("Overload timer: " + timeSinceLastOverloadDose, 5, 265);
 
         }
 
