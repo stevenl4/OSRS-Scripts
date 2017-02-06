@@ -227,6 +227,7 @@ public class Main extends AbstractScript {
                 absorptionPointsLeft = 0;
             }
             // Check prayer, make sure prayer can be turned on
+            // Turn it on near the end, when you have less than 20 absorptions left
             if ((!getPrayer().isActive(Prayer.PROTECT_FROM_MELEE) && (getSkills().getBoostedLevels(Skill.HITPOINTS) > sv.maxHp + 1) || absorptionPointsLeft < 20)){
                 if (System.currentTimeMillis() - dreamStartTimer > 25000){
                     if (getSkills().getBoostedLevels(Skill.PRAYER) > 0 ){
@@ -236,6 +237,20 @@ public class Main extends AbstractScript {
                     }
                 }
 
+            }
+
+            // If during absorption potion phase, turn off when equal to maxHp
+            // If out of absorption phase, turn off when at least 20 absorptionpoints
+            if (getPrayer().isActive(Prayer.PROTECT_FROM_MELEE)){
+                if (!outOfOverloadPots){
+                    if (getSkills().getBoostedLevels(Skill.HITPOINTS) <= sv.maxHp){
+                        getPrayer().toggle(false, Prayer.PROTECT_FROM_MELEE);
+                    }
+                } else {
+                    if (absorptionPointsLeft >= 20){
+                        getPrayer().toggle(false, Prayer.PROTECT_FROM_MELEE);
+                    }
+                }
             }
 
             if (getPrayer().isActive(Prayer.PROTECT_FROM_MELEE) && getSkills().getBoostedLevels(Skill.HITPOINTS) <= sv.maxHp && !outOfOverloadPots){
@@ -285,7 +300,7 @@ public class Main extends AbstractScript {
 
         // Check prayer potion and set a level to use the next dose
         if (getSkills().getBoostedLevels(Skill.PRAYER) < lowPrayerThreshold && !outOfPrayerPots) {
-            if (!outOfOverloadPots && sv.exitWhenOutOfOverload){
+            if (!sv.exitWhenOutOfOverload || !outOfOverloadPots && sv.exitWhenOutOfOverload){
                 outOfPrayerPots = true;
                 for (int i = 1; i < 5; i ++){
                     String potionName = "Prayer potion(" + i + ")";
@@ -319,19 +334,33 @@ public class Main extends AbstractScript {
 
 
         // Check for special spawns
-        if (timeSinceLastPowerUpCheck >= 2000) {
+        if (timeSinceLastPowerUpCheck >= 1500) {
             // Check Zapper
-
+            // TODO: add logic to check which powerups are needed
             GameObject goZapper = getGameObjects().closest(gO -> gO.getName().contains("Zapper") && gO.hasAction("Activate"));
             if (goZapper != null && goZapper.hasAction("Activate")) {
                 log("Zapper found");
                 getWalking().walk(goZapper);
-                sleepUntil(() -> getLocalPlayer().distance(getClient().getDestination()) < 2, 5000);
+                sleepUntil(() -> getLocalPlayer().distance(getClient().getDestination()) < 3, 3000);
                 goZapper.interact();
                 sleep(700);
-                sleepUntil(() -> !goZapper.exists(), 5000);
+                sleepUntil(() -> !goZapper.exists(), 1000);
                 log("Zapper activate");
                 getCamera().rotateToPitch(Calculations.random(350,383));
+            }
+
+            // Check recurrent damange
+            GameObject goRecurrentDamage = getGameObjects().closest(gO -> gO.getName().contains("Recurrent damage") && gO.hasAction("Activate"));
+            if (goRecurrentDamage != null && goRecurrentDamage.hasAction("Activate")){
+                log("Recurrent damage found");
+                getWalking().walk(goRecurrentDamage);
+                sleepUntil(() -> getLocalPlayer().distance(getClient().getDestination()) < 3,3000);
+                goRecurrentDamage.interact();
+                sleep(700);
+                sleepUntil(() -> !goRecurrentDamage.exists(), 1000);
+                log("Recurrent damage activated");
+                getCamera().rotateToPitch(Calculations.random(340, 383));
+
             }
 
             // Check Power surge
@@ -339,10 +368,10 @@ public class Main extends AbstractScript {
             if (goPowerSurge != null && goPowerSurge.hasAction("Activate")) {
                 log("Power surge found");
                 getWalking().walk(goPowerSurge);
-                sleepUntil(() -> getLocalPlayer().distance(getClient().getDestination()) < 2, 5000);
+                sleepUntil(() -> getLocalPlayer().distance(getClient().getDestination()) < 3, 3000);
                 goPowerSurge.interact();
                 sleep(700);
-                sleepUntil(() -> !goPowerSurge.exists(), 5000);
+                sleepUntil(() -> !goPowerSurge.exists(), 1000);
                 log("Power surge activated");
                 getCamera().rotateToPitch(Calculations.random(350,383));
                 if (!goPowerSurge.exists()){
@@ -535,10 +564,10 @@ public class Main extends AbstractScript {
             g.drawString("HP exp (p/h): " + getSkillTracker().getGainedExperience(Skill.HITPOINTS) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.HITPOINTS)) + ")", 5,90);
             g.drawString("Ranged exp (p/h): " + getSkillTracker().getGainedExperience(Skill.RANGED) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.RANGED)) + ")", 5, 105);
 
-            g.drawString("Next prayer drink: " + lowPrayerThreshold, 5, 220);
-            g.drawString("Next absorption drink: " + lowAbsorptionThreshold, 5, 235);
-            g.drawString("Time since last flick: " + nextRapidHealFlick, 5, 250);
-            g.drawString("Overload timer: " + timeSinceLastOverloadDose, 5, 265);
+//            g.drawString("Next prayer drink: " + lowPrayerThreshold, 5, 220);
+//            g.drawString("Next absorption drink: " + lowAbsorptionThreshold, 5, 235);
+//            g.drawString("Time since last flick: " + nextRapidHealFlick, 5, 250);
+//            g.drawString("Overload timer: " + timeSinceLastOverloadDose, 5, 265);
 
         }
 
