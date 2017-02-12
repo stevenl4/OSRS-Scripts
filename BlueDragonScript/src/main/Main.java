@@ -553,9 +553,29 @@ public class Main extends AbstractScript {
         }
     }
 
+    public long getGainedExperience(){
+        long atk = getSkillTracker().getGainedExperience(Skill.ATTACK);
+        long str = getSkillTracker().getGainedExperience(Skill.STRENGTH);
+        long def = getSkillTracker().getGainedExperience(Skill.DEFENCE);
+        long range = getSkillTracker().getGainedExperience(Skill.RANGED);
+        return atk + str + def + range;
+    }
+
     @Override
-    public void onPaint(Graphics graphics) {
-        super.onPaint(graphics);
+    public void onPaint(Graphics g) {
+        if (sv.started){
+            g.drawString("State: " + getState().toString(),5,10);
+            g.drawString("Runtime: " + timer.format(), 5, 30);
+            g.drawString("Experience (p/h): " + getGainedExperience() + "(" + timer.getPerHour(getGainedExperience()) + ")", 5, 45);
+        }
+
+        for (int i = 0; i < lootTrack.size(); i++){
+            PricedItem p = lootTrack.get(i);
+            if (p != null){
+                String name = p.getName();
+                g.drawString(name + " (p/h): " + p.getAmount() + "(" + timer.getPerHour(p.getAmount()) + ")" , 400, (i + 1)* 15);
+            }
+        }
     }
 
 }
