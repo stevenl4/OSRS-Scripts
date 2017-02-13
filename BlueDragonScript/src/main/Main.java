@@ -49,28 +49,21 @@ public class Main extends AbstractScript {
     private Area blueDragonSpawn0Area = blueDragonSpawn0.getArea(6);
 
     private Tile blueDragonSpawn1 = new Tile(2569,9441,0);
-
     private Tile blueDragonSpawn2 = new Tile(2609,9461,0);
     private Tile blueDragonSpawn3 = new Tile();
-
     private Tile blueDragonSpawn4 = new Tile(2597,9432,0);
 
     private long lastScanPlayerCount;
-    private long lootTimerStart;
     private long lastSearchGround;
     private long timeSinceLastSearchGround;
     private long lastAntifireDose;
     private long timeSinceLastAntifireDose;
     private int antibanValue;
-    java.util.List<PricedItem> lootTrack = new ArrayList<PricedItem>();
+    private java.util.List<PricedItem> lootTrack = new ArrayList<PricedItem>();
     private GroundItem gi;
     ScriptVars sv = new ScriptVars();
     private RunTimer timer;
     private boolean bankMode;
-    private boolean duelRingFound;
-    private boolean combatPotFound;
-    private boolean antifirePotFound;
-    private boolean antifireShieldFound;
     private boolean foodFound;
 
     private boolean gatePassed;
@@ -80,7 +73,7 @@ public class Main extends AbstractScript {
         WALK_TO_TRAINING, WALK_TO_BANK, FIGHT, LOOT, BANK, HOP
     }
 
-    Filter<GroundItem> itemFilter = gi -> {
+    private Filter<GroundItem> itemFilter = gi -> {
 
         if (gi == null || !gi.exists() || gi.getName() == null){
             return false;
@@ -132,7 +125,7 @@ public class Main extends AbstractScript {
         sv.requiredFoodAmt = 20;
         sv.useAntifirePot = false;
         sv.useCombatPot = true;
-
+        timer = new RunTimer();
         bankMode = false;
         for (int i = 0; i < sv.loot.length; i ++){
             log("Looting: " + sv.loot[i]);
@@ -180,15 +173,6 @@ public class Main extends AbstractScript {
 
     private void walkToTraining(){
 
-        if (caveInsideArea.contains(getLocalPlayer())){
-            if (!blueDragonArea.contains(getLocalPlayer())){
-                getWalking().walk(blueDragonArea.getRandomTile());
-                sleepUntil(() -> blueDragonArea.contains(getLocalPlayer()), 3000);
-            }
-        } else {
-
-        }
-
         if (!gatePassed){
             if (cityGateTile.getArea(1).contains(getLocalPlayer())){
                 // City Gate
@@ -227,7 +211,7 @@ public class Main extends AbstractScript {
         }
 
         // Relegate heal to outside of combat, eat until 80%
-        // Heal at 75%, leave at 50%;
+        // if need to eat during combat, eat at 50%, if no food, leave at 50%;
 
         if (getCombat().getHealthPercent() < 80 && !getLocalPlayer().isInCombat()){
             if (getInventory().contains(sv.foodName)){
@@ -235,8 +219,13 @@ public class Main extends AbstractScript {
             }
         }
         if (getCombat().getHealthPercent() < 50){
-            bankMode = true;
+            if (getInventory().contains(sv.foodName)){
+                getInventory().interact(sv.foodName, "Eat");
+            } else {
+                bankMode = true;
+            }
         }
+
         // Pots
         if (sv.useCombatPot && getSkills().getBoostedLevels(Skill.STRENGTH) == getSkills().getRealLevel(Skill.STRENGTH)){
             for (int i = 1; i < 5; i++){
@@ -275,6 +264,10 @@ public class Main extends AbstractScript {
             if (blueDragon != null && blueDragon.getHealthPercent() > 0 && blueDragon.exists()){
                 blueDragon.interact("Attack");
                 sleepUntil(() -> blueDragon.isInCombat(), Calculations.random(400,800));
+            }
+
+            if (blueDragon.getHealthPercent() == 0 && sv.waitForLoot){
+                sleepUntil(() -> !blueDragon.isAnimating(), 1000);
             }
         }
 
@@ -318,7 +311,7 @@ public class Main extends AbstractScript {
             if (gi != null && getMap().canReach(gi)) {
                 log("looting " + gi.getName());
                 gi.interact("Take");
-                lootTimerStart = System.currentTimeMillis();
+                long lootTimerStart = System.currentTimeMillis();
                 sleepUntil(() -> !gi.exists(), 2000);
                 if (System.currentTimeMillis() - lootTimerStart > 1500){
                     //taking too long to loot, probably stuck
@@ -341,6 +334,7 @@ public class Main extends AbstractScript {
         // MUST GET REQUIRED INVENTORY
         if (getBank().isOpen()){
             // Dueling ring
+            boolean duelRingFound;
             if (!getInventory().contains(i -> i.getName().contains("dueling"))){
                 duelRingFound = false;
                 for (int a = 1; a < 8; a++){
@@ -365,6 +359,7 @@ public class Main extends AbstractScript {
             }
 
             // Combat pot
+            boolean combatPotFound;
             if (sv.useCombatPot){
                 if (!getInventory().contains(i -> i.getName().contains("Combat potion"))){
                     combatPotFound = false;
@@ -384,6 +379,7 @@ public class Main extends AbstractScript {
 
             // Extended antifire pot
             if (sv.useAntifirePot){
+                boolean antifirePotFound;
                 if (!getInventory().contains(i -> i.getName().contains("Extended antifire"))){
                     antifirePotFound = false;
                     for (int a = 1; a < 5; a++){
@@ -400,6 +396,7 @@ public class Main extends AbstractScript {
             }
 
             // Antifire shield
+            boolean antifireShieldFound;
             if (getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot()) != null){
                 if (getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot()).getName().contains("Dragonfire") || getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot()).getName().contains("Anti-dragon")) {
                     antifireShieldFound = true;
@@ -461,7 +458,7 @@ public class Main extends AbstractScript {
     }
 
     private void walkToBank(){
-        if (blueDragonArea.contains(getLocalPlayer())){
+        if (broadBlueDragonArea.contains(getLocalPlayer())){
             log("teleporting to CW");
             // Use ring of duelling: REQUIRED
             if (getInventory().interact(i -> i.hasAction("Rub") && i.getName().contains("duel"), "Rub")){

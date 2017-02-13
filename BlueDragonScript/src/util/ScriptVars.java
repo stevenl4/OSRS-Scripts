@@ -17,4 +17,5 @@ public class ScriptVars {
     public boolean useAntifirePot = false;
     public boolean useCombatPot = true;
     public int antibanValue = 10;
+    public boolean waitForLoot = true;
 }
