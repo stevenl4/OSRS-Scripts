@@ -68,7 +68,6 @@ public class Main extends AbstractScript {
     private long lastAntifireDose;
     private long timeSinceLastAntifireDose;
     private long lootWaitTime;
-    private int antibanValue;
     private java.util.List<PricedItem> lootTrack = new ArrayList<PricedItem>();
     private GroundItem gi;
     ScriptVars sv = new ScriptVars();
@@ -597,7 +596,7 @@ public class Main extends AbstractScript {
     private void antiban() {
         int random = Calculations.random(1, 100);
         long tmpValue = 0;
-        antibanValue = 0;
+        long antibanValue = 0;
         if (random < 20) {
             if (!getTabs().isOpen(Tab.STATS)) {
                 getTabs().open(Tab.STATS);
