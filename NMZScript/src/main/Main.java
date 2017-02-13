@@ -256,9 +256,6 @@ public class Main extends AbstractScript {
                 }
             }
 
-            if (getPrayer().isActive(Prayer.PROTECT_FROM_MELEE) && getSkills().getBoostedLevels(Skill.HITPOINTS) <= sv.maxHp && !outOfOverloadPots){
-                getPrayer().toggle(false, Prayer.PROTECT_FROM_MELEE);
-            }
 
             // Guzzle cake only when between 1 and 51 hp
             if ((getSkills().getBoostedLevels(Skill.HITPOINTS) > sv.maxHp && getSkills().getBoostedLevels(Skill.HITPOINTS) < 51) || outOfOverloadPots){
