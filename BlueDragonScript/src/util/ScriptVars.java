@@ -18,4 +18,5 @@ public class ScriptVars {
     public boolean useCombatPot = true;
     public int antibanValue = 10;
     public boolean waitForLoot = true;
+    public int lootRadius = 30;
 }

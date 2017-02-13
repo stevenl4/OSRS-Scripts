@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="BlueDragonScript">
+    <output-path>$USER_HOME$/DreamBot/Scripts</output-path>
+    <root id="archive" name="BlueDragonScript.jar">
+      <element id="module-output" name="BlueDragonScript" />
+      <element id="library" level="project" name="client" />
+    </root>
+  </artifact>
+</component>
