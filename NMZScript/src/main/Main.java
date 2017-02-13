@@ -247,14 +247,10 @@ public class Main extends AbstractScript {
             }
 
             // If during absorption potion phase, turn off when equal to maxHp
-            // If out of absorption phase, turn off when at least 20 absorptionpoints
+            // If out of absorption pots, just leave it on
             if (getPrayer().isActive(Prayer.PROTECT_FROM_MELEE)){
                 if (!outOfOverloadPots){
                     if (getSkills().getBoostedLevels(Skill.HITPOINTS) <= sv.maxHp){
-                        getPrayer().toggle(false, Prayer.PROTECT_FROM_MELEE);
-                    }
-                } else {
-                    if (absorptionPointsLeft >= 20){
                         getPrayer().toggle(false, Prayer.PROTECT_FROM_MELEE);
                     }
                 }
