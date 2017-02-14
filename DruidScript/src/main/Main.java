@@ -124,7 +124,7 @@ public class Main extends AbstractScript {
             sleep(1000);
         }
 
-        sv.uniqueLoot = new String[]{"Grimy avantoe", "Grimy irit leaf", "Grimy kwuarm", "Grimy ranarr weed", "Grimy lantadyme", "Grimy dwarf weed", "Grimy cadantine", "Law rune", "Nature rune", "Mithril bolts"};
+        sv.uniqueLoot = new String[]{"Grimy avantoe", "Grimy irit leaf", "Grimy kwuarm", "Grimy ranarr weed", "Grimy lantadyme", "Grimy dwarf weed", "Grimy cadantine", "Ensouled chaos druid head", "Law rune", "Nature rune", "Mithril bolts"};
         sv.loot = Stream.of(sv.uniqueLoot, sv.universalLoot).flatMap(Stream::of).distinct().toArray(String[]::new);
 
         for (int i = 0; i < sv.loot.length; i++) {
