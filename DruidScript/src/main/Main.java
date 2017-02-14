@@ -37,7 +37,7 @@ public class Main extends AbstractScript {
     // -----------------------------------------------------------------------------------------------------------------
     private Area druidArea = new Area(2560,3358,2564,3354,0);
     private Area druidEntranceArea = new Area(2565,3358,2566,3355,0);
-    private Area druidTowerDownStairs = new Area (2563,9757,2564,9755,0);
+    private Area druidTowerDownStairs = new Area (2563,9757,2567,9750,0);
     private Area druidTowerUpStairs = new Area (2560,3357,2561,3355,1);
     private NPC druid;
     java.util.List<PricedItem> lootTrack = new ArrayList<PricedItem>();

@@ -60,6 +60,8 @@ public class Main extends AbstractScript {
 
     private Area trainingArea;
 
+    private java.util.List<Area> trainingAreas = new ArrayList<>();
+
     private long lastScanPlayerCount;
     private long lastAnimation;
     private long timeSinceLastAnimation;
@@ -68,7 +70,7 @@ public class Main extends AbstractScript {
     private long lastAntifireDose;
     private long timeSinceLastAntifireDose;
     private long lootWaitTime;
-    private java.util.List<PricedItem> lootTrack = new ArrayList<PricedItem>();
+    private java.util.List<PricedItem> lootTrack = new ArrayList<>();
     private GroundItem gi;
     ScriptVars sv = new ScriptVars();
     private RunTimer timer;

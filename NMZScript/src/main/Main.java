@@ -282,7 +282,7 @@ public class Main extends AbstractScript {
                 }
             }
 
-            if (timeSinceLastRapidHeal > nextRapidHealFlick) {
+            if (timeSinceLastRapidHeal > nextRapidHealFlick && getSkills().getBoostedLevels(Skill.PRAYER) > 0) {
                 getPrayer().flick(Prayer.RAPID_HEAL, Calculations.random(250,350));
                 nextRapidHealFlick = Calculations.random(40000,50000);
                 lastRapidHeal = System.currentTimeMillis();
