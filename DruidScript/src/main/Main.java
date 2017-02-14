@@ -126,11 +126,10 @@ public class Main extends AbstractScript {
         }
 
 
+        for (Skill s : Skill.values()){
+            getSkillTracker().start(s);
+        }
 
-        getSkillTracker().start(Skill.DEFENCE);
-        getSkillTracker().start(Skill.ATTACK);
-        getSkillTracker().start(Skill.STRENGTH);
-        getSkillTracker().start(Skill.RANGED);
         timer = new RunTimer();
         sv.testMode = testMode;
         if (sv.testMode){
