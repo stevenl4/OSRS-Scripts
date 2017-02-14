@@ -238,7 +238,7 @@ public class Main extends AbstractScript {
             if ((!getPrayer().isActive(Prayer.PROTECT_FROM_MELEE) && (getSkills().getBoostedLevels(Skill.HITPOINTS) > sv.maxHp + 1) || absorptionPointsLeft < 20)){
                 if (System.currentTimeMillis() - dreamStartTimer > 25000){
                     if (getSkills().getBoostedLevels(Skill.PRAYER) > 0 ){
-                        log("Turning on Prayer because hp > " + sv.maxHp);
+
                         getPrayer().toggle(true, Prayer.PROTECT_FROM_MELEE);
                         sleepUntil(() -> getPrayer().isActive(Prayer.PROTECT_FROM_MELEE), 400);
                     }
@@ -325,7 +325,7 @@ public class Main extends AbstractScript {
                 String potionName = "Overload (" + i + ")";
                 if (getInventory().contains(potionName)) {
                     if (getInventory().interact(potionName, "Drink")){
-                        log("Drinking overload");
+
                         lastOverloadDose = System.currentTimeMillis();
                         sleepUntil(() -> getSkills().getBoostedLevels(Skill.STRENGTH) > getSkills().getRealLevel(Skill.STRENGTH), 800);
                         outOfOverloadPots = false;
@@ -341,26 +341,26 @@ public class Main extends AbstractScript {
             // Check Zapper
             GameObject goZapper = getGameObjects().closest(gO -> gO.getName().contains("Zapper") && gO.hasAction("Activate"));
             if (goZapper != null && goZapper.hasAction("Activate") && sv.useZapper) {
-                log("Zapper found");
+
                 getWalking().walk(goZapper);
                 sleepUntil(() -> getLocalPlayer().distance(getClient().getDestination()) < 3, 3000);
                 goZapper.interact();
                 sleep(700);
                 sleepUntil(() -> !goZapper.exists(), 1000);
-                log("Zapper activate");
+
                 getCamera().rotateToPitch(Calculations.random(350,383));
             }
 
             // Check recurrent damange
             GameObject goRecurrentDamage = getGameObjects().closest(gO -> gO.getName().contains("Recurrent damage") && gO.hasAction("Activate"));
             if (goRecurrentDamage != null && goRecurrentDamage.hasAction("Activate") && sv.useConcurrentDamage){
-                log("Recurrent damage found");
+
                 getWalking().walk(goRecurrentDamage);
                 sleepUntil(() -> getLocalPlayer().distance(getClient().getDestination()) < 3,3000);
                 goRecurrentDamage.interact();
                 sleep(700);
                 sleepUntil(() -> !goRecurrentDamage.exists(), 1000);
-                log("Recurrent damage activated");
+
                 getCamera().rotateToPitch(Calculations.random(340, 383));
 
             }
@@ -368,13 +368,13 @@ public class Main extends AbstractScript {
             // Check Power surge
             GameObject goPowerSurge = getGameObjects().closest(i -> i.getName().contains("Power surge") && i.hasAction("Activate"));
             if (goPowerSurge != null && goPowerSurge.hasAction("Activate") && sv.usePowerSurge) {
-                log("Power surge found");
+
                 getWalking().walk(goPowerSurge);
                 sleepUntil(() -> getLocalPlayer().distance(getClient().getDestination()) < 3, 3000);
                 goPowerSurge.interact();
                 sleep(700);
                 sleepUntil(() -> !goPowerSurge.exists(), 1000);
-                log("Power surge activated");
+
                 getCamera().rotateToPitch(Calculations.random(350,383));
                 if (!goPowerSurge.exists()){
                     lastPowerSurge = System.currentTimeMillis();
@@ -411,11 +411,9 @@ public class Main extends AbstractScript {
             }
 
             if (!getCombat().isSpecialActive()){
-                log("using special");
+
                 sleep(Calculations.random(50,100));
                 getCombat().toggleSpecialAttack(true);
-            } else {
-                log ("special clicked");
             }
 
         } else if (!useSpec) {
