@@ -44,6 +44,7 @@ public class Main extends AbstractScript {
     private long lastSearchGround;
     private long lastScanPlayerCount;
     private long lootTimerStart;
+    private int playersInArea;
     private GroundItem gi;
     ScriptVars sv = new ScriptVars();
     private RunTimer timer;
@@ -66,18 +67,10 @@ public class Main extends AbstractScript {
     }
 
     private State getState(){
-        int playersInArea = 1;
 
 
-        if (System.currentTimeMillis() - lastScanPlayerCount > 5000){
-            lastScanPlayerCount = System.currentTimeMillis();
-            playersInArea = countPlayers();
-        }
 
-        if (System.currentTimeMillis() - lastSearchGround > 1000 && druidArea.contains(getLocalPlayer())){
-            lastSearchGround = System.currentTimeMillis();
-            gi = getGroundItems().closest(itemFilter);
-        }
+
 
 
         if ((getInventory().isFull() || getLocalPlayer().getHealthPercent() < 40)){
@@ -157,6 +150,16 @@ public class Main extends AbstractScript {
 
         if (!getWalking().isRunEnabled() && getWalking().getRunEnergy() > Calculations.random(30,50)){
             getWalking().toggleRun();
+        }
+
+        if (System.currentTimeMillis() - lastScanPlayerCount > 5000){
+            lastScanPlayerCount = System.currentTimeMillis();
+            playersInArea = countPlayers();
+        }
+
+        if (System.currentTimeMillis() - lastSearchGround > 1000 && druidArea.contains(getLocalPlayer())){
+            lastSearchGround = System.currentTimeMillis();
+            gi = getGroundItems().closest(itemFilter);
         }
 
         switch (getState()){
