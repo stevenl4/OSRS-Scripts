@@ -137,11 +137,10 @@ public class Main extends AbstractScript {
         log("Absorption Method: " + sv.absorptionMethod);
         log("Prayer Method: " + sv.prayerMethod);
 
-        getSkillTracker().start(Skill.DEFENCE);
-        getSkillTracker().start(Skill.ATTACK);
-        getSkillTracker().start(Skill.STRENGTH);
-        getSkillTracker().start(Skill.HITPOINTS);
-        getSkillTracker().start(Skill.RANGED);
+        for (Skill s : Skill.values()){
+            getSkillTracker().start(s);
+        }
+
         timer = new RunTimer();
 
 
@@ -420,7 +419,12 @@ public class Main extends AbstractScript {
             // Switch to normal weapons
             if (getInventory().contains(mainWeapon.getName())){
                 getInventory().interact(mainWeapon.getName(), "Wield");
-                sleepUntil(() -> getEquipment().getItemInSlot(EquipmentSlot.WEAPON.getSlot()).getName().equals(mainWeapon.getName()), 600);
+                sleepUntil(() -> getEquipment().getItemInSlot(EquipmentSlot.WEAPON.getSlot()).getName().equals(mainWeapon.getName()), 1500);
+            }
+
+            if (!getEquipment().getItemInSlot(EquipmentSlot.WEAPON.getSlot()).getName().equals(mainWeapon.getName()) && specWeapon != null){
+                getInventory().slotInteract(1, "Wield");
+                sleepUntil(() -> !getEquipment().getItemInSlot(EquipmentSlot.WEAPON.getSlot()).getName().equals(specWeapon.getName()), 1000);
             }
 
             if (mainShield != null){
@@ -532,13 +536,16 @@ public class Main extends AbstractScript {
                         antibanValue += getSkillTracker().getGainedExperience(s);
                     }
                 }
-
+                log ("antiban value: " + antibanValue);
                 if (antibanValue > 0){
                     long checkValue = Calculations.random(1,antibanValue);
+                    log("checkValue: " + checkValue);
                     for (Skill s : Skill.values()){
                         if (getSkillTracker().getGainedExperience(s) > 0){
                             tmpValue += getSkillTracker().getGainedExperience(s);
+                            log("Skill: " + s.toString() + " | tmpValue: " + tmpValue + " | checkValue: " + checkValue);
                             if (tmpValue >= checkValue){
+                                log("hovering skill: " + s.toString());
                                 getSkills().hoverSkill(s);
                                 break;
                             }
