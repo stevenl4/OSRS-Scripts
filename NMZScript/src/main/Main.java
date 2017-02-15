@@ -248,8 +248,8 @@ public class Main extends AbstractScript {
             // If during absorption potion phase, turn off when equal to maxHp
             // If out of absorption pots, just leave it on
             if (getPrayer().isActive(Prayer.PROTECT_FROM_MELEE)){
-                if (!outOfOverloadPots){
-                    if (getSkills().getBoostedLevels(Skill.HITPOINTS) <= sv.maxHp){
+                if (!outOfOverloadPots ){
+                    if (getSkills().getBoostedLevels(Skill.HITPOINTS) <= sv.maxHp && absorptionPointsLeft > 20){
                         getPrayer().toggle(false, Prayer.PROTECT_FROM_MELEE);
                     }
                 }
@@ -318,18 +318,20 @@ public class Main extends AbstractScript {
         }
 
         // Drink Overload Potion
-        if (timeSinceLastOverloadDose >= 300000 && getSkills().getBoostedLevels(Skill.HITPOINTS) >= 51 && !outOfOverloadPots) {
+        if (timeSinceLastOverloadDose >= 300000 && getSkills().getBoostedLevels(Skill.HITPOINTS) >= 51) {
+
             outOfOverloadPots = true;
             for (int i = 1; i < 5; i ++){
                 String potionName = "Overload (" + i + ")";
                 if (getInventory().contains(potionName)) {
+                    log ("Drinking overload");
                     if (getInventory().interact(potionName, "Drink")){
-
                         lastOverloadDose = System.currentTimeMillis();
-                        sleepUntil(() -> getSkills().getBoostedLevels(Skill.STRENGTH) > getSkills().getRealLevel(Skill.STRENGTH), 800);
+                        sleepUntil(() -> getSkills().getBoostedLevels(Skill.STRENGTH) > getSkills().getRealLevel(Skill.STRENGTH), 1000);
                         outOfOverloadPots = false;
                         break;
                     }
+
                 }
             }
         }
@@ -375,7 +377,7 @@ public class Main extends AbstractScript {
                 sleepUntil(() -> !goPowerSurge.exists(), 1000);
 
                 getCamera().rotateToPitch(Calculations.random(350,383));
-                if (!goPowerSurge.exists()){
+                if (!goPowerSurge.exists() || goPowerSurge == null){
                     lastPowerSurge = System.currentTimeMillis();
                 }
             }
@@ -536,16 +538,16 @@ public class Main extends AbstractScript {
                         antibanValue += getSkillTracker().getGainedExperience(s);
                     }
                 }
-                log ("antiban value: " + antibanValue);
+
                 if (antibanValue > 0){
                     long checkValue = Calculations.random(1,antibanValue);
-                    log("checkValue: " + checkValue);
+
                     for (Skill s : Skill.values()){
                         if (getSkillTracker().getGainedExperience(s) > 0){
                             tmpValue += getSkillTracker().getGainedExperience(s);
-                            log("Skill: " + s.toString() + " | tmpValue: " + tmpValue + " | checkValue: " + checkValue);
+
                             if (tmpValue >= checkValue){
-                                log("hovering skill: " + s.toString());
+
                                 getSkills().hoverSkill(s);
                                 break;
                             }
