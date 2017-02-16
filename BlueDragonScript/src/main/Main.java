@@ -1,7 +1,6 @@
 package main;
 
 import org.dreambot.api.methods.Calculations;
-import org.dreambot.api.methods.container.impl.bank.Bank;
 import org.dreambot.api.methods.container.impl.bank.BankLocation;
 import org.dreambot.api.methods.container.impl.equipment.EquipmentSlot;
 import org.dreambot.api.methods.filter.Filter;
@@ -48,7 +47,7 @@ public class Main extends AbstractScript {
     private Area broadBlueDragonArea = new Area(2550,9466,2612,9430,0);
     private Area blueDragonArea = new Area (2560,9452,2582,9433,0);
     private Area caveEntranceArea = new Area (2506,3042,2510,3038,0);
-    private Area caveInsideArea = new Area(2586,9420,2591, 9408);
+    private Area caveInsideArea = new Area(2586,9420,2591, 9407);
     private Tile cityEntranceTile = new Tile(2527,3072,0);
     private Area cityGateOutsideArea = new Area(2504,3063,2506,3062,0);
     private Area cityGateInsideArea = new Area(2503,3063,2503,3062,0);
@@ -82,7 +81,7 @@ public class Main extends AbstractScript {
     private boolean caveEntered;
 
     private enum State {
-        WALK_TO_TRAINING, WALK_TO_BANK, FIGHT, LOOT, BANK, HOP
+        WALK_TO_TRAINING, WALK_TO_BANK, FIGHT, LOOT, BANK, HOP, EMERGENCY;
     }
 
     private Filter<GroundItem> itemFilter = gi -> {
@@ -99,6 +98,10 @@ public class Main extends AbstractScript {
     };
 
     private State getState(){
+
+        if (getSkills().getBoostedLevels(Skill.HITPOINTS) < 20){
+            return State.EMERGENCY;
+        }
 
         if (bankMode) {
             if (BankLocation.CASTLE_WARS.getArea(10).contains(getLocalPlayer())){
@@ -164,7 +167,8 @@ public class Main extends AbstractScript {
             bankMode = true;
         }
 
-        if (getLocalPlayer().isAnimating()){
+        if (getLocalPlayer().isAnimating() || getLocalPlayer().isMoving()){
+
             lastAnimation = System.currentTimeMillis();
         }
 
@@ -197,16 +201,44 @@ public class Main extends AbstractScript {
             case WALK_TO_TRAINING:
                 walkToTraining();
                 break;
+            case EMERGENCY:
+                emergencyExit();
+                break;
         }
         updateLoot();
         return Calculations.random(500,600);
     }
 
     private void walkToTraining(){
+        if (cityEntranceTile.getArea(2).contains(getLocalPlayer())) {
+            cityEntranceReached = true;
+        }
 
+        if (cityGateInsideArea.contains(getLocalPlayer())){
+            gatePassed = true;
+            cityEntranceReached = true;
+        }
+
+        if (caveInsideArea.contains(getLocalPlayer())){
+            gatePassed = true;
+            cityEntranceReached = true;
+            caveEntered = true;
+
+        }
         if (broadBlueDragonArea.contains(getLocalPlayer())){
             getWalking().walk(trainingArea.getRandomTile());
         } else {
+
+            // WALK WEST IF LACK OF ACTION
+            if (timeSinceLastAnimation > 15000){
+                log("Stuck, trying to move");
+                int curX = getLocalPlayer().getX();
+                int curY = getLocalPlayer().getY();
+                Tile unstuckWalkTile = new Tile(curX + Calculations.random(4,7), curY);
+                if (getWalking().walk(unstuckWalkTile)){
+                    sleepUntil(() -> getLocalPlayer().getX() != curX, 1500);
+                }
+            }
 
             if (!cityEntranceReached) {
                 if (cityEntranceTile.getArea(2).contains(getLocalPlayer())) {
@@ -220,12 +252,14 @@ public class Main extends AbstractScript {
                     if (cityGateOutsideArea.contains(getLocalPlayer())){
                         // City Gate
                         GameObject cityGate = getGameObjects().closest(2788);
-                        cityGate.interact("Open");
-                        sleepUntil(() -> cityGateInsideArea.contains(getLocalPlayer()), 2500);
-                        if (cityGateInsideArea.contains(getLocalPlayer())){
-                            log ("passed city gate");
-                            gatePassed = true;
+                        if (cityGate.interact("Open")){
+                            sleepUntil(() -> cityGateInsideArea.contains(getLocalPlayer()), 2500);
+                            if (cityGateInsideArea.contains(getLocalPlayer())){
+                                log ("passed city gate");
+                                gatePassed = true;
+                            }
                         }
+
                     } else {
                         log("Walking to city gate");
                         getWalking().walk(cityGateOutsideArea.getRandomTile());
@@ -235,15 +269,16 @@ public class Main extends AbstractScript {
                         if (caveEntranceArea.contains(getLocalPlayer())){
                             // Cave Entrance
                             GameObject caveEntrance = getGameObjects().closest(2804);
-                            caveEntrance.interact("Enter");
-                            sleepUntil(() -> caveInsideArea.contains(getLocalPlayer()), 2500);
-                            if (caveInsideArea.contains(getLocalPlayer())){
-
-                                caveEntered = true;
+                            if (caveEntrance.interact("Enter")){
+                                sleepUntil(() -> caveInsideArea.contains(getLocalPlayer()), 10000);
+                                if (caveInsideArea.contains(getLocalPlayer())){
+                                    caveEntered = true;
+                                }
                             }
+
                         } else {
                             log("Walking to cave");
-                            getWalking().walk(caveEntranceArea.getRandomTile());
+                            getWalking().walk(caveEntranceArea.getCenter());
                         }
                     } else {
                         log("Walking to dragon spawn");
@@ -255,7 +290,20 @@ public class Main extends AbstractScript {
 
     }
 
+    private void emergencyExit(){
+        log("HP LOW!!! RUNNING EMERGENCY EXIT");
+        if (broadBlueDragonArea.contains(getLocalPlayer())){
 
+            getEquipment().getItemInSlot(EquipmentSlot.AMULET.getSlot()).interact("Edgeville");
+            sleepUntil(() -> !broadBlueDragonArea.contains(getLocalPlayer()), 1000);
+            if (!broadBlueDragonArea.contains(getLocalPlayer())){
+                log("Almost died, stopping script");
+                stop();
+            }
+        } else {
+            stop();
+        }
+    }
     private void fight(){
 
         // auto retaliate
@@ -329,16 +377,23 @@ public class Main extends AbstractScript {
                                             trainingArea.contains(n)) || n.isInteracting(getLocalPlayer())));
         }
 
+        if (blueDragon != null){
+            log("target selected " + blueDragon.getName());
+        }
         // Chill and attack
         if (getLocalPlayer().isInCombat() || getLocalPlayer().isInteractedWith()){
+            log("In combat");
             if (blueDragon == null){
                 blueDragon = getNpcs().closest(n -> n.getName().equals("Blue dragon") && n.isInteracting(getLocalPlayer()));
                 if (blueDragon != null){
                     log("Selecting blue dragon attacking me as target");
                 }
             }
-            if (timeSinceLastAnimation > 8000 && blueDragon != null){
+            if (timeSinceLastAnimation > 5000 && blueDragon != null){
+                log("trying to attack");
+                getMouse().setAlwaysHop(true);
                 blueDragon.interact("Attack");
+                getMouse().setAlwaysHop(false);
                 lastAnimation = System.currentTimeMillis();
             }
 
@@ -346,8 +401,11 @@ public class Main extends AbstractScript {
                 antiban();
             }
         } else {
+            log("not in combat");
             if (blueDragon != null && blueDragon.getHealthPercent() > 0 && blueDragon.exists()){
+                getMouse().setAlwaysHop(true);
                 blueDragon.interact("Attack");
+                getMouse().setAlwaysHop(false);
                 sleepUntil(() -> blueDragon.isInCombat(), Calculations.random(400,800));
             }
         }
@@ -425,7 +483,6 @@ public class Main extends AbstractScript {
                         getBank().withdraw(ringName, 1);
                         sleepUntil(() -> getInventory().contains(ringName), 1000);
                         if (getInventory().contains(ringName)){
-
                             duelRingFound = true;
                         }
                         break;
@@ -453,7 +510,11 @@ public class Main extends AbstractScript {
                         String potName = "Combat potion(" + a + ")";
                         if (getBank().contains(potName)){
                             getBank().withdraw(potName, 1);
-                            combatPotFound = true;
+                            sleepUntil(() -> getInventory().contains(potName), 1500);
+                            if (getInventory().contains(potName)){
+
+                                combatPotFound = true;
+                            }
                             break;
                         }
                     }
@@ -472,7 +533,11 @@ public class Main extends AbstractScript {
                         String potName = "Extended antifire (" + a + ")";
                         if (getBank().contains(potName)){
                             getBank().withdraw(potName, 1);
-                            combatPotFound = true;
+                            sleepUntil(() -> getInventory().contains(potName), 1500);
+                            if (getInventory().contains(potName)){
+
+                                combatPotFound = true;
+                            }
                             break;
                         }
                     }
@@ -482,7 +547,7 @@ public class Main extends AbstractScript {
             }
 
             // Antifire shield
-            boolean antifireShieldFound;
+            boolean antifireShieldFound = false;
             if (getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot()) != null){
                 if (getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot()).getName().contains("Dragonfire") || getEquipment().getItemInSlot(EquipmentSlot.SHIELD.getSlot()).getName().contains("Anti-dragon")) {
                     antifireShieldFound = true;
@@ -490,17 +555,19 @@ public class Main extends AbstractScript {
                     if (getBank().contains("Dragonfire shield")){
                         getBank().withdraw("Dragonfire shield", 1);
                         sleepUntil(() -> getInventory().contains("Dragonfire shield"), 1000);
-                        antifireShieldFound = true;
+                        if (getInventory().contains("Dragonfire shield")){
+                            antifireShieldFound = true;
+                        }
                     } else if (getBank().contains("Anti-dragon shield")){
                         getBank().withdraw("Anti-dragon shield");
                         sleepUntil(() -> getInventory().contains("Anti-dragon shield"), 1000);
-                        antifireShieldFound = true;
+                        if (getInventory().contains("Anti-dragon shield")){
+                            antifireShieldFound = true;
+                        }
                     } else {
                         antifireShieldFound = false;
                     }
                 }
-            } else {
-                antifireShieldFound = false;
             }
 
             if (bankMode){
@@ -597,54 +664,32 @@ public class Main extends AbstractScript {
 
     private void antiban() {
         int random = Calculations.random(1, 100);
-        long tmpValue = 0;
-        long antibanValue = 0;
-        if (random < 20) {
+        if (random < 20){
             if (!getTabs().isOpen(Tab.STATS)) {
                 getTabs().open(Tab.STATS);
-                for (Skill s : Skill.values()){
-                    if (getSkillTracker().getGainedExperience(s) > 0){
-                        antibanValue += getSkillTracker().getGainedExperience(s);
-                    }
+                if (random < 4) {
+                    getSkills().hoverSkill(Skill.ATTACK);
+                } else if (random < 8) {
+                    getSkills().hoverSkill(Skill.STRENGTH);
+                } else if (random < 12) {
+                    getSkills().hoverSkill(Skill.DEFENCE);
+                } else if (random < 16) {
+                    getSkills().hoverSkill(Skill.RANGED);
+                } else {
+                    getSkills().hoverSkill(Skill.HITPOINTS);
                 }
-
-                if (antibanValue > 0){
-                    long checkValue = Calculations.random(1,antibanValue);
-                    for (Skill s : Skill.values()){
-                        if (getSkillTracker().getGainedExperience(s) > 0){
-                            tmpValue += getSkillTracker().getGainedExperience(s);
-                            if (tmpValue >= checkValue){
-                                getSkills().hoverSkill(s);
-                                break;
-                            }
-                        }
-                    }
-                }
-                sleepUntil(() -> !getLocalPlayer().isInCombat() || !getLocalPlayer().isAnimating(), Calculations.random(300, 500));
+                sleepUntil(()-> !getLocalPlayer().isInCombat() || !getLocalPlayer().isInteractedWith(),Calculations.random(300, 500));
             }
-
-        } else if (random <= 25) {
-            if (!getTabs().isOpen(Tab.INVENTORY)) {
+        } else if (random <= 30) {
+            if (!getTabs().isOpen(Tab.INVENTORY)){
                 getTabs().open(Tab.INVENTORY);
-                sleep(Calculations.random(300, 600));
             }
-        } else if (random <= 29) {
-            if (!getTabs().isOpen(Tab.COMBAT)) {
-                getTabs().open(Tab.COMBAT);
-                sleep(Calculations.random(100, 500));
-            }
-        } else if (random <= 35) {
-            // rotate camera
-
-            getCamera().rotateToTile(getLocalPlayer().getSurroundingArea(4).getRandomTile());
-            getCamera().rotateToPitch(Calculations.random(275, 383));
         } else {
-            if (getMouse().isMouseInScreen()) {
-                if (getMouse().moveMouseOutsideScreen()) {
-                    sleepUntil(() -> !getLocalPlayer().isInCombat() || !getLocalPlayer().isAnimating(), Calculations.random(500, 1000));
+            if (getMouse().isMouseInScreen()){
+                if (getMouse().moveMouseOutsideScreen()){
+                    sleepUntil(()-> !getLocalPlayer().isInCombat() || !getLocalPlayer().isInteractedWith(),Calculations.random(500, 3300));
                 }
             }
-
         }
     }
 
@@ -665,6 +710,7 @@ public class Main extends AbstractScript {
             if (getLocalPlayer().getInteractingCharacter() != null){
                 g.drawString("Interacting: " + getLocalPlayer().getInteractingCharacter().getName(), 5, 60);
             }
+            g.drawString("timeSinceLastAnimation: " + timeSinceLastAnimation, 5, 75);
 
         }
 

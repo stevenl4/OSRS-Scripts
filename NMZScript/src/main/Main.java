@@ -526,59 +526,37 @@ public class Main extends AbstractScript {
         sleepUntil(() -> getLocalPlayer().getTile().distance(startTile) > 0 , 3000);
         dreamStartTimer = System.currentTimeMillis();
     }
+
+
     private void antiban() {
+
         int random = Calculations.random(1, 100);
-        long tmpValue = 0;
-        long antibanValue = 0;
-        if (random < 20) {
+        if (random < 20){
             if (!getTabs().isOpen(Tab.STATS)) {
                 getTabs().open(Tab.STATS);
-                for (Skill s : Skill.values()){
-                    if (getSkillTracker().getGainedExperience(s) > 0){
-                        antibanValue += getSkillTracker().getGainedExperience(s);
-                    }
+                if (random < 4) {
+                    getSkills().hoverSkill(Skill.ATTACK);
+                } else if (random < 8) {
+                    getSkills().hoverSkill(Skill.STRENGTH);
+                } else if (random < 12) {
+                    getSkills().hoverSkill(Skill.DEFENCE);
+                } else if (random < 16) {
+                    getSkills().hoverSkill(Skill.RANGED);
+                } else {
+                    getSkills().hoverSkill(Skill.HITPOINTS);
                 }
-
-                if (antibanValue > 0){
-                    long checkValue = Calculations.random(1,antibanValue);
-
-                    for (Skill s : Skill.values()){
-                        if (getSkillTracker().getGainedExperience(s) > 0){
-                            tmpValue += getSkillTracker().getGainedExperience(s);
-
-                            if (tmpValue >= checkValue){
-
-                                getSkills().hoverSkill(s);
-                                break;
-                            }
-                        }
-                    }
-                }
-                sleepUntil(() -> !getLocalPlayer().isInCombat() || !getLocalPlayer().isAnimating(), Calculations.random(300, 500));
+                sleepUntil(()-> !getLocalPlayer().isInCombat() || !getLocalPlayer().isInteractedWith(),Calculations.random(300, 500));
             }
-
-        } else if (random <= 25) {
-            if (!getTabs().isOpen(Tab.INVENTORY)) {
+        } else if (random <= 30) {
+            if (!getTabs().isOpen(Tab.INVENTORY)){
                 getTabs().open(Tab.INVENTORY);
-                sleep(Calculations.random(300, 600));
             }
-        } else if (random <= 29) {
-            if (!getTabs().isOpen(Tab.COMBAT)) {
-                getTabs().open(Tab.COMBAT);
-                sleep(Calculations.random(100, 500));
-            }
-        } else if (random <= 35) {
-            // rotate camera
-
-            getCamera().rotateToTile(getLocalPlayer().getSurroundingArea(4).getRandomTile());
-            getCamera().rotateToPitch(Calculations.random(275, 383));
         } else {
-            if (getMouse().isMouseInScreen()) {
-                if (getMouse().moveMouseOutsideScreen()) {
-                    sleepUntil(() -> !getLocalPlayer().isInCombat() || !getLocalPlayer().isAnimating(), Calculations.random(500, 1000));
+            if (getMouse().isMouseInScreen()){
+                if (getMouse().moveMouseOutsideScreen()){
+                    sleepUntil(()-> !getLocalPlayer().isInCombat() || !getLocalPlayer().isInteractedWith(),Calculations.random(500, 3300));
                 }
             }
-
         }
     }
 
