@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="AirOrbScript">
+    <output-path>$USER_HOME$/DreamBot/Scripts</output-path>
+    <root id="archive" name="AirOrbScript.jar">
+      <element id="module-output" name="AirOrbScript" />
+    </root>
+  </artifact>
+</component>

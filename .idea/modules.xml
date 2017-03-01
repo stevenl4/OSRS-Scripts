@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/AirOrbScript/AirOrbScript.iml" filepath="$PROJECT_DIR$/AirOrbScript/AirOrbScript.iml" />
       <module fileurl="file://$PROJECT_DIR$/AlKharidWarriorScript/AlKharidWarriorScript.iml" filepath="$PROJECT_DIR$/AlKharidWarriorScript/AlKharidWarriorScript.iml" />
       <module fileurl="file://$PROJECT_DIR$/BlueDragonScript/BlueDragonScript.iml" filepath="$PROJECT_DIR$/BlueDragonScript/BlueDragonScript.iml" />
       <module fileurl="file://$PROJECT_DIR$/DruidScript/DruidScript.iml" filepath="$PROJECT_DIR$/DruidScript/DruidScript.iml" />
