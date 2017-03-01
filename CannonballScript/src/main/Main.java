@@ -9,9 +9,12 @@ import org.dreambot.api.script.Category;
 import org.dreambot.api.script.ScriptManifest;
 import org.dreambot.api.wrappers.interactive.GameObject;
 import org.dreambot.api.wrappers.widgets.WidgetChild;
+import util.PricedItem;
 import util.RunTimer;
 import util.ScriptVars;
 
+import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -20,6 +23,7 @@ import java.util.List;
 @ScriptManifest(category = Category.SMITHING, name = "Cannonball creator", author = "GB", version = 1.0, description = "Creates cannonballs")
 public class Main  extends AbstractScript{
 
+    java.util.List<PricedItem> lootTrack = new ArrayList<PricedItem>();
     ScriptVars sv = new ScriptVars();
     private RunTimer timer;
     private int first;
@@ -57,6 +61,11 @@ public class Main  extends AbstractScript{
         for (Skill s : Skill.values()){
             getSkillTracker().start(s);
         }
+
+
+        lootTrack.add(new PricedItem("Cannonball", getClient().getMethodContext(), false));
+
+        sv.started = true;
     }
 
     @Override
@@ -93,7 +102,14 @@ public class Main  extends AbstractScript{
                 break;
             case TEST:
         }
+        updateLoot();
         return Calculations.random(600,700);
+    }
+
+    private void updateLoot(){
+        for(PricedItem p : lootTrack){
+            p.update();
+        }
     }
 
     private void bank(){
@@ -187,5 +203,23 @@ public class Main  extends AbstractScript{
         if (getMouse().isMouseInScreen()){
             getMouse().moveMouseOutsideScreen();
         }
+    }
+
+    @Override
+    public void onPaint(Graphics g) {
+        if (sv.started) {
+            g.drawString("State: " + getState().toString(),5,10);
+            g.drawString("Runtime: " + timer.format(), 5, 30);
+            g.drawString("Experience (p/h): " + getSkillTracker().getGainedExperience(Skill.SMITHING) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.SMITHING)) + ")", 5, 45);
+
+            for (int i = 0; i < lootTrack.size(); i++){
+                PricedItem p = lootTrack.get(i);
+                if (p != null){
+                    String name = p.getName();
+                    g.drawString(name + " (p/h): " + p.getAmount() + "(" + timer.getPerHour(p.getAmount()) + ")" , 5, (i + 1)* 15 +60);
+                }
+            }
+        }
+
     }
 }
