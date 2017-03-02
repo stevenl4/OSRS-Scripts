@@ -30,8 +30,8 @@ public class Main  extends AbstractScript{
     private int second;
     private boolean levelUp;
     private long lastBarSmithed;
-    private Area furnaceArea = new Area();
-    private Area bankArea = BankLocation.EDGEVILLE.getArea(8);
+    private Area furnaceArea = new Area(3107,3500,3109,3498,0);
+    private Area bankArea = new Area(3094,3497,3098,3494,0);
     public enum State {
         SMITH, BANK, WALK_TO_FURNACE, TEST
     }
@@ -157,7 +157,11 @@ public class Main  extends AbstractScript{
     }
 
     private void smith(){
+        if (getCamera().getYaw() > 300 && getCamera().getYaw() < 700){
 
+        } else {
+            getCamera().rotateToYaw(Calculations.random(301,699));
+        }
         first = getInventory().count("Steel bar");
 
         if(first < second){
@@ -171,6 +175,7 @@ public class Main  extends AbstractScript{
             if (!widgetChildList.isEmpty()){
                 if (widgetChildList.get(0).interact("Make All")){
                     sleepUntil(() -> getLocalPlayer().isAnimating(), 1500);
+                    lastBarSmithed = System.currentTimeMillis();
                 }
             } else {
                 if (!getInventory().isItemSelected()){
@@ -179,9 +184,11 @@ public class Main  extends AbstractScript{
                     }
                 } else {
                     GameObject furnace = getGameObjects().closest("Furnace");
+                    log("looking for furnace");
                     if (furnace != null){
                         if (furnace.interact("Use")){
                             // Sleep until the widget is available
+                            sleep(Calculations.random(500,1000));
                         }
                     }
                 }
@@ -193,9 +200,9 @@ public class Main  extends AbstractScript{
     }
 
     private void walkToFurnace(){
-        if (!furnaceArea.getCenter().getArea(3).contains(getLocalPlayer())){
+        if (!furnaceArea.contains(getLocalPlayer())){
             log("Walking to furnace area");
-            getWalking().walk(furnaceArea.getCenter().getArea(3).getRandomTile());
+            getWalking().walk(furnaceArea.getRandomTile());
         }
     }
 

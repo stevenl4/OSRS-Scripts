@@ -160,6 +160,12 @@ public class Main extends AbstractScript {
             getCombat().toggleAutoRetaliate(true);
         }
 
+        // Toggle mouse hop
+        if (!getMouse().isMouseInScreen()){
+            getMouse().setAlwaysHop(true);
+        } else {
+            getMouse().setAlwaysHop(false);
+        }
         switch (getState()){
             case ATTACK:
                 attack();
@@ -221,12 +227,16 @@ public class Main extends AbstractScript {
                 antiban();
             } else {
                 log("re-engaging target");
+
                 guard.interact("Attack");
+
             }
         } else {
             if (guard != null && guard.getHealthPercent() > 0 && guard.exists()) {
                 log ("target selected");
+
                 guard.interact("Attack");
+
                 sleepUntil(guard::isInCombat, Calculations.random(400,800));
             }
         }

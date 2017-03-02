@@ -163,6 +163,12 @@ public class Main extends AbstractScript {
             getWalking().toggleRun();
         }
 
+        // Toggle mouse hop
+        if (!getMouse().isMouseInScreen()){
+            getMouse().setAlwaysHop(true);
+        } else {
+            getMouse().setAlwaysHop(false);
+        }
         if (!freeUpInventorySpace()){
             bankMode = true;
         }
@@ -391,9 +397,7 @@ public class Main extends AbstractScript {
             }
             if (timeSinceLastAnimation > 5000 && blueDragon != null){
                 log("trying to attack");
-                getMouse().setAlwaysHop(true);
                 blueDragon.interact("Attack");
-                getMouse().setAlwaysHop(false);
                 lastAnimation = System.currentTimeMillis();
             }
 
@@ -403,9 +407,9 @@ public class Main extends AbstractScript {
         } else {
             log("not in combat");
             if (blueDragon != null && blueDragon.getHealthPercent() > 0 && blueDragon.exists()){
-                getMouse().setAlwaysHop(true);
+
                 blueDragon.interact("Attack");
-                getMouse().setAlwaysHop(false);
+
                 sleepUntil(() -> blueDragon.isInCombat(), Calculations.random(400,800));
             }
         }
