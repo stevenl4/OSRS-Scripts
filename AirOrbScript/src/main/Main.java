@@ -187,7 +187,7 @@ public class Main extends AbstractScript {
 
 
         if (orbArea.contains(getLocalPlayer())){
-            log("teleporting to edgeville");
+
             if (!getTabs().isOpen(Tab.EQUIPMENT)){
                 if (getTabs().open(Tab.EQUIPMENT)){
                     sleepUntil(() -> getTabs().isOpen(Tab.EQUIPMENT),2000);
@@ -195,6 +195,7 @@ public class Main extends AbstractScript {
                 }
             }
             if (getEquipment().getItemInSlot(EquipmentSlot.AMULET.getSlot()).interact("Edgeville")){
+                log("teleporting to edgeville");
                 sleepUntil(() -> !orbArea.contains(getLocalPlayer()), 2000);
             }
         }
