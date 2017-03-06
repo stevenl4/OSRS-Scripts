@@ -28,6 +28,7 @@ public class Main  extends AbstractScript{
     private RunTimer timer;
     private int first;
     private int second;
+    private int barCount;
     private boolean levelUp;
     private long lastBarSmithed;
     private Area furnaceArea = new Area(3107,3500,3109,3498,0);
@@ -138,10 +139,14 @@ public class Main  extends AbstractScript{
                 }
 
                 if (getBank().contains("Steel bar")){
+                    barCount = barCount + getBank().count("Steel bar");
                     if(getBank().withdrawAll("Steel bar")){
                         log ("withdrawing steel bars");
                         sleepUntil(() -> getInventory().contains("Steel bar"), 1500);
                     }
+                } else {
+                    log("Out of steel bars, Stopping");
+                    stop();
                 }
             } else {
                 if (getBank().openClosest()){
@@ -218,7 +223,7 @@ public class Main  extends AbstractScript{
             g.drawString("State: " + getState().toString(),5,10);
             g.drawString("Runtime: " + timer.format(), 5, 30);
             g.drawString("Experience (p/h): " + getSkillTracker().getGainedExperience(Skill.SMITHING) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.SMITHING)) + ")", 5, 45);
-
+            g.drawString("Bars left: " + barCount, 5,60);
             for (int i = 0; i < lootTrack.size(); i++){
                 PricedItem p = lootTrack.get(i);
                 if (p != null){
