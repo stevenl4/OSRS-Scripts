@@ -274,7 +274,7 @@ public class Main extends AbstractScript {
         }
 
         // Use special
-        if (getCombat().getSpecialPercentage() == 100){
+        if (getCombat().getSpecialPercentage() == 100 && sv.useSpec){
             getCombat().toggleSpecialAttack(true);
         }
 

@@ -16,7 +16,7 @@ public class Gui extends JFrame {
     private JTextField txtFoodName;
     private JTextField txtFoodAmt;
     JCheckBox chckbxHopWorlds = new JCheckBox("hop worlds");
-
+    JCheckBox chckbxUseSpec = new JCheckBox("use spec");
     public Gui(final ScriptVars var){
         setTitle("DreamBot");
         setAlwaysOnTop(true);
@@ -65,6 +65,14 @@ public class Gui extends JFrame {
         chckbxHopWorlds.setSelected(true);
         panel.add(chckbxHopWorlds);
 
+        JLabel lblUseSpec = new JLabel("Use Spec:");
+        lblUseSpec.setBounds(0, 85, 90, 15);
+        panel.add(lblUseSpec);
+
+        chckbxUseSpec.setBounds(100,85,100,20);
+        chckbxUseSpec.setSelected(true);
+        panel.add(chckbxUseSpec);
+
         JButton btnNewButton = new JButton("Start!");
         btnNewButton.addActionListener(new ActionListener() {
             @Override
@@ -73,6 +81,7 @@ public class Gui extends JFrame {
                 var.foodName = txtFoodName.getText();
                 var.requiredFoodAmt = Integer.parseInt(txtFoodAmt.getText());
                 var.hop = chckbxHopWorlds.isSelected();
+                var.useSpec = chckbxUseSpec.isSelected();
                 var.started = true;
                 dispose();
             }

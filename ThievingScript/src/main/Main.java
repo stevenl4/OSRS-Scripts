@@ -87,7 +87,7 @@ public class Main extends AbstractScript {
 
 
         // Got attacked, kill the guard
-        if (getLocalPlayer().isInCombat() || getLocalPlayer().isInteractedWith()){
+        if (getLocalPlayer().isInCombat()){
             if (!getCombat().isAutoRetaliateOn()) {
                 getCombat().toggleAutoRetaliate(true);
             }
@@ -413,7 +413,7 @@ public class Main extends AbstractScript {
             g.drawString("Exp (p/h) : " + getSkillTracker().getGainedExperience(Skill.THIEVING) + "(" + timer.getPerHour(getSkillTracker().getGainedExperience(Skill.THIEVING)) + ")", 5, 45);
             g.drawString("Level Start (gained): " + getSkillTracker().getStartLevel(Skill.THIEVING) + "(" + getSkillTracker().getGainedLevels(Skill.THIEVING) + ")", 5,60);
             g.drawString("Eating at: " + hpToEatAt,5,75);
-            g.drawString("Bank at: " + hpToBankAt, 5,90);
+
 
             for (int i = 0; i < lootTrack.size(); i++){
                 PricedItem p = lootTrack.get(i);

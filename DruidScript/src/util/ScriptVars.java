@@ -13,6 +13,7 @@ public class ScriptVars {
     public int maxPlayerAmt;
     public boolean started = false;
     public boolean hop;
+    public boolean useSpec;
     public boolean testMode = false;
     public String foodName;
     public int requiredFoodAmt;
