@@ -9,5 +9,8 @@ public class ScriptVars {
     public int antibanRate;
     public boolean curse;
     public boolean highAlch;
+    public boolean enchant;
+    public int enchantLevel;
+    public String enchantItem;
     public boolean started = false;
 }

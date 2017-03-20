@@ -36,7 +36,7 @@ public class MagicGui extends JFrame{
 
 
 
-        JLabel lblName = new JLabel("Splash + Alcher");
+        JLabel lblName = new JLabel("Splash + Alcher + Enchanter");
         lblName.setForeground(Color.BLACK);
         lblName.setBackground(UIManager.getColor("Button.background"));
         lblName.setFont(new Font("Tahoma", Font.PLAIN, 27));
@@ -45,13 +45,13 @@ public class MagicGui extends JFrame{
         contentPane.add(lblName);
 
         JRadioButton rdbtnCurse = new JRadioButton("Confuse / Weaken / Curse");
-        rdbtnCurse.setSelected(true);
+        rdbtnCurse.setSelected(false);
         rdbtnCurse.setBounds(10, 70, 258, 23);
         contentPane.add(rdbtnCurse);
 
-        JRadioButton rdbtnHighAlch = new JRadioButton("High Alch");
-        rdbtnHighAlch.setBounds(10, 128, 109, 23);
-        contentPane.add(rdbtnHighAlch);
+        JRadioButton rdbtnEnchant = new JRadioButton("Enchant?");
+        rdbtnEnchant.setBounds(10, 128, 109, 23);
+        contentPane.add(rdbtnEnchant);
 
         JLabel lblItemName = new JLabel("Item Name");
         lblItemName.setBounds(10, 158, 65, 14);
@@ -59,6 +59,7 @@ public class MagicGui extends JFrame{
 
         txtItemName = new JTextField();
         txtItemName.setBounds(91, 155, 177, 20);
+        txtItemName.setText("Opal necklace");
         contentPane.add(txtItemName);
         txtItemName.setColumns(10);
 
@@ -96,9 +97,9 @@ public class MagicGui extends JFrame{
 
                 var.npcLevel = Integer.parseInt(txtNpcLevel.getText());
                 var.antibanRate = sldrAntibanRate.getValue();
-                var.highAlch = rdbtnHighAlch.isSelected();
+                var.enchant = rdbtnEnchant.isSelected();
                 var.curse = rdbtnCurse.isSelected();
-                var.alchItems = txtItemName.getText().split(";");
+                var.enchantItem = txtItemName.getText();
                 var.started = true;
 
                 dispose();
